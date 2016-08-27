@@ -1,0 +1,7 @@
+build/*
+*.pyc
+*.db
+logs/*
+debug/*
+*.json
+*.egg-info
