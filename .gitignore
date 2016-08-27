@@ -1,7 +1,8 @@
 build/*
 *.pyc
 *.db
-logs/*
-debug/*
+steamcommerce_purchases/logs/*
+steamcommerce_purchases/debug/*
 *.json
 *.egg-info
+*.log

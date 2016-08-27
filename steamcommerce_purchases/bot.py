@@ -2,42 +2,46 @@
 # -*- coding:Utf-8 -*-
 
 import os
-import sys
+import re
 import time
 import json
 import pickle
-import logging
+import requests
 
 import steam.guard
 import steam.webauth
+
+import logger
 from totp import SteamTOTP
 
 
-log = logging.getLogger('[SteamCommerce Purchases]')
-
-log.setLevel(logging.DEBUG)
-format = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-ch = logging.StreamHandler(sys.stdout)
-fh = logging.FileHandler('logs/purchases.log')
-
-ch.setFormatter(format)
-fh.setFormatter(format)
-
-log.addHandler(ch)
-log.addHandler(fh)
+log = logger.Logger('SteamCommerce Purchases', 'purchases.log').get_logger()
 
 
 class PurchaseBot(object):
-    def __init__(self):
+    def __init__(self, data_path=None, pickle_path=None):
+        self.data_path = data_path
+        self.pickle_path = pickle_path
         self.REQUESTS_DEBUG = True
 
-    def debug_html_to_file(self, filename, content):
-        f = open(os.path.join('debug', filename), 'wb+')
-        f.write(content.encode('utf-8'))
-        f.close()
+    def init_bot(self):
+        if not self.data_path:
+            raise Exception('No json data file found')
+
+        data = self.get_json_from_file(self.data_path)
+
+        if not os.path.isfile(self.pickle_path):
+            self.init_session(data)
+        else:
+            log.info(u'Initiliazing session from pickle')
+            self.init_session_from_file(self.pickle_path)
+            log.info(u'Checking if session is still logged in')
+
+            if not self.session_is_logged_in(data['account_name']):
+                log.info(u'Session got logged out! Re-logging in...')
+                self.init_session(data)
+            else:
+                log.info(u'Session is still logged in')
 
     def get_json_from_file(self, pathname):
         f = open(pathname, 'r')
@@ -59,7 +63,7 @@ class PurchaseBot(object):
         return session
 
     def save_session_to_file(self):
-        f = open('session.pickle', 'wb+')
+        f = open(self.pickle_path, 'wb+')
         pickle.dump(self.session, f)
         f.close()
 
@@ -111,12 +115,16 @@ class PurchaseBot(object):
         self.session = session
 
         log.debug(u'Session is set')
-
         log.debug(u'Saving session to file')
 
         self.save_session_to_file()
 
         return session
+
+    def debug_html_to_file(self, filename, content):
+        f = open(os.path.join('debug', filename), 'wb+')
+        f.write(content.encode('utf-8'))
+        f.close()
 
     def add_subid_to_cart(self, subid):
         req = self.session.post(
@@ -415,3 +423,90 @@ class PurchaseBot(object):
             self.save_session_to_file()
 
         return True
+
+
+class RegisterBot(object):
+    def __init__(self, account_name, password, email):
+        self.account_name = account_name
+        self.password = password
+        self.email = email
+
+    def check_availability(self):
+        req = requests.get(
+            'https://store.steampowered.com/join/checkavail/',
+            params={
+                'accountname': self.account_name,
+                'count': 1
+            }
+        )
+
+        if req.status_code != 200:
+            return None
+
+        try:
+            req.json()
+        except ValueError:
+            return None
+
+        return req.json()['bAvailable']
+
+    def get_register_page(self):
+        return requests.get('https://store.steampowered.com/join/')
+
+    def get_captcha_from_register(self, request):
+        matches = re.findall(
+            r'captcha\.php\?gid=([0-9]+)',
+            request.text,
+            re.DOTALL
+        )
+
+        if not len(matches):
+            return None
+
+        return matches[0]
+
+    def verify_captcha(self, captcha_gid, captcha_text):
+        req = requests.get(
+            'https://store.steampowered.com/join/verifycaptcha/',
+            params={
+                'captchagid': captcha_gid,
+                'captcha_text': captcha_text,
+                'email': self.email,
+                'count': 22
+            }
+        )
+
+        if req.status_code != 200:
+            return None
+
+        try:
+            req.json()
+        except ValueError:
+            return None
+
+        return req.json()['bCaptchaMatches']
+
+    def create_account(self, captcha_gid, captcha_text):
+        req = requests.post(
+            'https://store.steampowered.com/join/createaccount/',
+            data={
+                'accountname': self.account_name,
+                'captcha_text': captcha_text,
+                'captchagid': captcha_gid,
+                'count': 22,
+                'email': self.email,
+                'i_agree': 1,
+                'password': self.password,
+                'ticket': ''
+            }
+        )
+
+        if req.status_code != 200:
+            return None
+
+        try:
+            req.json()
+        except ValueError:
+            return None
+
+        return req.json()['bSuccess']
