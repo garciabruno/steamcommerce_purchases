@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 # -*- coding:Utf-8 -*-
 
+import os
 import sys
 import logging
+
+import steamcommerce_purchases
 
 
 class Logger(object):
@@ -29,7 +32,10 @@ class Logger(object):
 
         if fdout:
             fh = logging.FileHandler(
-                'logs/{0}'.format(self.log_name)
+                os.path.join(
+                    steamcommerce_purchases.__path__[0],
+                    'logs/{0}'.format(self.log_name)
+                )
             )
 
             fh.setFormatter(format)
