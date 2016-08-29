@@ -6,6 +6,7 @@ import re
 import time
 import json
 import pickle
+import urllib
 import requests
 
 import steam.guard
@@ -417,12 +418,241 @@ class PurchaseBot(object):
             self.session.set('shoppingCartGID', None)
 
             self.session.set(
-                'shoppingCartGID', None, domain='store.steampowered.com'
+                'shoppingCartGID',
+                None,
+                domain='store.steampowered.com'
             )
 
             self.save_session_to_file()
 
         return True
+
+    def verify_account_email(self, token):
+        req = self.session.get(
+            'https://steamcommunity.com/actions/validateemail',
+            params={
+                'stoken': token
+            }
+        )
+
+        if req.status_code != 200:
+            return None
+
+        try:
+            req.json()
+        except ValueError:
+            return None
+
+        return 'Success!' in req.text
+
+    def validate_phone_number(self, phone_number):
+        # Format must be '+54+351xxxxxxx'
+
+        req = self.session.get(
+            'https://store.steampowered.com/phone/validate',
+            params='phoneNumber={0}'.format(phone_number)
+        )
+
+        if req.status_code != 200:
+            return None
+
+        try:
+            req.json()
+        except ValueError:
+            return None
+
+        data = req.json()
+
+        return data['success'] and data['is_valid']
+
+    def add_phone_number(self, phone_number):
+        req = self.session.get(
+            'https://store.steampowered.com//phone/add_ajaxop',
+            params={
+                'op': 'get_phone_number',
+                'input': phone_number,
+                'sessionID': self.session.cookies.get(
+                    'sessionid',
+                    domain='store.steampowered.com'
+                ),
+                'confirmed': 1,
+                'checkfortos': 1,
+                'bisediting': 0
+            }
+        )
+
+        if req.status_code != 200:
+            return None
+
+        try:
+            req.json()
+        except ValueError:
+            return None
+
+        data = req.json()
+
+        return data['success'] and data['state'] == 'get_sms_code'
+
+    def confirm_sms_code(self, sms_code):
+        req = requests.get(
+            'https://store.steampowered.com//phone/add_ajaxop',
+            params={
+                'op': 'get_sms_code',
+                'input': sms_code,
+                'sessionID': self.session.cookies.get(
+                    'sessionid',
+                    domain='store.steampowered.com'
+                ),
+                'confirmed': 1,
+                'checkfortos': 1,
+                'bisediting': 0
+            }
+        )
+
+        if req.status_code != 200:
+            return None
+
+        try:
+            req.json()
+        except ValueError:
+            return None
+
+        data = req.json()
+
+        return data['success'] and data['state'] == 'done'
+
+    def add_funds(self, amount, method='bitcoin', country_code='AR'):
+        import ipdb; ipdb.set_trace()
+
+        req = self.session.post(
+            'http://store.steampowered.com/steamaccount/addfundssubmit',
+            data={
+                'action': 'add_to_cart',
+                'amount': amount,
+                'currency': 'USD',
+                'mtreturnurl': '',
+                'sessionID': self.session.cookies.get(
+                    'sessionid',
+                    domain='store.steampowered.com'
+                )
+            }
+        )
+
+        matches = re.findall(
+            r'cart=([0-9]+)',
+            urllib.unquote(req.url),
+            re.DOTALL
+        )
+
+        if not len(matches):
+            return False
+
+        cart_gid = matches[0]
+
+        req = self.session.post(
+            'https://store.steampowered.com/checkout/inittransaction/',
+            data={
+                'Address': '',
+                'AddressTwo': '',
+                'BankAccount': '',
+                'BankBIC': '',
+                'BankCode': '',
+                'BankIBAN': '',
+                'CardExpirationMonth': '',
+                'CardExpirationYear': '',
+                'CardNumber': '',
+                'City': '',
+                'Country': country_code,
+                'FirstName': '',
+                'GiftMessage': '',
+                'GifteeAccountID': 0,
+                'GifteeEmail': '',
+                'GifteeName': '',
+                'LastName': '',
+                'PaymentMethod': method,
+                'Phone': '',
+                'PostalCode': '',
+                'ScheduledSendOnDate': 0,
+                'Sentiment': '',
+                'ShippingAddress': '',
+                'ShippingAddressTwo': '',
+                'ShippingCity': '',
+                'ShippingCountry': country_code,
+                'ShippingFirstName': '',
+                'ShippingLastName': '',
+                'ShippingPhone': '',
+                'ShippingPostalCode': '',
+                'ShippingState': '',
+                'Signature': '',
+                'State': '',
+                'abortPendingTransactions': 0,
+                'bHasCardInfo': 0,
+                'bIsGift': 0,
+                'bPreAuthOnly': 0,
+                'bSaveBillingAddress': 1,
+                'bUseRemainingSteamAccount': 0,
+                'gidPaymentID': '',
+                'gidReplayOfTransID': -1,
+                'gidShoppingCart': cart_gid,
+            }
+        )
+
+        if req.status_code != 200:
+            return False
+
+        try:
+            data = req.json()
+        except ValueError:
+            return False
+
+        if not data['success']:
+            return False
+
+        transid = data['transid']
+
+        req = self.session.get(
+            'https://store.steampowered.com/checkout/getfinalprice/',
+            params={
+                'count': 1,
+                'transid': transid,
+                'purchasetype': 'self',
+                'microtxnid': -1,
+                'cart': cart_gid,
+                'gidReplayOfTransID': -1
+            }
+        )
+
+        if req.status_code != 200:
+            return False
+
+        try:
+            data = req.json()
+        except ValueError:
+            return False
+
+        if not data['success']:
+            return False
+
+        req = self.session.get(
+            'https://store.steampowered.com/checkout/externallink/',
+            params={
+                'transid': transid
+            }
+        )
+
+        if method != 'bitcoin':
+            return req.url
+
+        matches = re.findall(
+            'action="(https://bitpay.com.*?)"',
+            req.text,
+            re.DOTALL
+        )
+
+        if not len(matches):
+            return False
+
+        return matches[0]
 
 
 class RegisterBot(object):
