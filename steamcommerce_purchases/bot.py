@@ -20,10 +20,11 @@ log = logger.Logger('SteamCommerce Purchases', 'purchases.log').get_logger()
 
 
 class PurchaseBot(object):
-    def __init__(self, data_path=None, pickle_path=None):
+    def __init__(self, data_path=None, pickle_path=None, USE_TWO_FACTOR=False):
         self.data_path = data_path
         self.pickle_path = pickle_path
-        self.REQUESTS_DEBUG = True
+        self.REQUESTS_DEBUG = False
+        self.USE_TWO_FACTOR = USE_TWO_FACTOR
 
     def init_bot(self):
         if not self.data_path:
@@ -101,12 +102,15 @@ class PurchaseBot(object):
     def init_session(self, data):
         log.debug(u'Intializing session')
 
-        twofactor_code = self.generate_twofactor_code(data['shared_secret'])
+        if self.USE_TWO_FACTOR:
+            twofactor_code = self.generate_twofactor_code(data['shared_secret'])
+            log.debug(u'Got twofactor_code {0}'.format(twofactor_code))
 
-        log.debug(u'Got twofactor_code {0}'.format(twofactor_code))
-
-        user = steam.webauth.WebAuth(data['account_name'], data['password'])
-        session = user.login(twofactor_code=twofactor_code)
+            user = steam.webauth.WebAuth(data['account_name'], data['password'])
+            session = user.login(twofactor_code=twofactor_code)
+        else:
+            user = steam.webauth.WebAuth(data['account_name'], data['password'])
+            session = user.login()
 
         log.debug(u'Logged in, retrieving store.steampowered.com')
 
