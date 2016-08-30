@@ -6,3 +6,4 @@ steamcommerce_purchases/debug/*
 *.json
 *.egg-info
 *.log
+*.pickle
