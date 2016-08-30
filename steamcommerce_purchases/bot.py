@@ -20,7 +20,7 @@ log = logger.Logger('SteamCommerce Purchases', 'purchases.log').get_logger()
 
 
 class PurchaseBot(object):
-    def __init__(self, data_path=None, pickle_path=None, USE_TWO_FACTOR=False):
+    def __init__(self, data_path=None, pickle_path=None, USE_TWO_FACTOR=True):
         self.data_path = data_path
         self.pickle_path = pickle_path
         self.REQUESTS_DEBUG = False
@@ -525,15 +525,13 @@ class PurchaseBot(object):
 
         return data['success'] and data['state'] == 'done'
 
-    def add_funds(self, amount, method='bitcoin', country_code='AR'):
-        import ipdb; ipdb.set_trace()
-
+    def add_funds(self, amount, method='bitcoin', country='AR', currency='USD'):
         req = self.session.post(
             'http://store.steampowered.com/steamaccount/addfundssubmit',
             data={
                 'action': 'add_to_cart',
                 'amount': amount,
-                'currency': 'USD',
+                'currency': currency,
                 'mtreturnurl': '',
                 'sessionID': self.session.cookies.get(
                     'sessionid',
@@ -566,7 +564,7 @@ class PurchaseBot(object):
                 'CardExpirationYear': '',
                 'CardNumber': '',
                 'City': '',
-                'Country': country_code,
+                'Country': country,
                 'FirstName': '',
                 'GiftMessage': '',
                 'GifteeAccountID': 0,
@@ -581,7 +579,7 @@ class PurchaseBot(object):
                 'ShippingAddress': '',
                 'ShippingAddressTwo': '',
                 'ShippingCity': '',
-                'ShippingCountry': country_code,
+                'ShippingCountry': country,
                 'ShippingFirstName': '',
                 'ShippingLastName': '',
                 'ShippingPhone': '',
