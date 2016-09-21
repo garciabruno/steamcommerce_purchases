@@ -10,24 +10,22 @@ import bot
 if __name__ == '__main__':
     bot.log.info(u'Intializing PurchaseBot')
 
-    halt_on_new_gid = True
+    halt_on_new_gid = False
     reset_gid = False
 
-    purchasebot = bot.PurchaseBot()
-    data = purchasebot.get_json_from_file('nin.json')
+    purchasebot = bot.PurchaseBot(
+        data_path='nin.json',
+        pickle_path='session.pickle'
+    )
 
-    if not os.path.isfile('session.pickle'):
-        purchasebot.init_session(data)
-    else:
-        purchasebot.init_session_from_file('session.pickle')
+    purchasebot.init_bot()
 
-        bot.log.info(u'Checking if session is still logged in')
+    gid = purchasebot.session.cookies.get(
+        'shoppingCartGID',
+        domain='store.steampowered.com'
+    )
 
-        if not purchasebot.session_is_logged_in(data['account_name']):
-            bot.log.info(u'Session got logged out! Re-logging in...')
-            purchasebot.init_session(data)
-        else:
-            bot.log.info(u'Session is still logged in')
+    bot.log.info(u'Current shoppingCartGID is: {0}'.format(gid))
 
     count = 1
 
@@ -44,7 +42,7 @@ if __name__ == '__main__':
         models.Product.store_sub_id != None
     )]
 
-    random_products = [random.choice(products) for x in xrange(20)]
+    random_products = [random.choice(products) for x in xrange(50)]
     subids = [x.store_sub_id for x in random_products]
 
     if reset_gid:
@@ -71,17 +69,16 @@ if __name__ == '__main__':
         f.write(req.text.encode('utf-8'))
         f.close()
 
-        bot.log.debug(req.headers)
-        bot.log.debug(req.cookies)
-
         received_new_gid = 'shoppingCartGID' in req.headers.get(
             'Set-Cookie',
             ''
         )
 
         if received_new_gid:
+            bot.log.info(u'** Received a new shoppingCartGID **')
+
             bot.log.info(
-                'Current shoppingCartGID is {0}'.format(
+                u'Current shoppingCartGID is {0}'.format(
                     purchasebot.session.cookies.get('shoppingCartGID')
                 )
             )
