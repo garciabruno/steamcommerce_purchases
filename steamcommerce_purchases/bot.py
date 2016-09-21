@@ -45,6 +45,14 @@ class PurchaseBot(object):
             else:
                 log.info(u'Session is still logged in')
 
+        log.info(u'Getting account store region')
+        region = self.get_store_region()
+
+        if not region:
+            log.error(u'Could not retrieve store region')
+        else:
+            log.info(u'Current store region is: {0}'.format(region))
+
     def get_json_from_file(self, pathname):
         f = open(pathname, 'r')
         raw = f.read()
@@ -73,7 +81,7 @@ class PurchaseBot(object):
         req = self.session.get('http://store.steampowered.com')
 
         if req.status_code != 200:
-            log.debug(u'Did not receive 200 from store')
+            log.error(u'Did not receive 200 from store')
 
             return False
 
@@ -100,11 +108,11 @@ class PurchaseBot(object):
         return totp.generateLoginToken()
 
     def init_session(self, data):
-        log.debug(u'Intializing session')
+        log.info(u'Intializing session')
 
         if self.USE_TWO_FACTOR:
             twofactor_code = self.generate_twofactor_code(data['shared_secret'])
-            log.debug(u'Got twofactor_code {0}'.format(twofactor_code))
+            log.info(u'Got twofactor_code {0}'.format(twofactor_code))
 
             user = steam.webauth.WebAuth(data['account_name'], data['password'])
             session = user.login(twofactor_code=twofactor_code)
@@ -112,15 +120,15 @@ class PurchaseBot(object):
             user = steam.webauth.WebAuth(data['account_name'], data['password'])
             session = user.login()
 
-        log.debug(u'Logged in, retrieving store.steampowered.com')
+        log.info(u'Logged in, retrieving store.steampowered.com')
 
         session.get('http://store.steampowered.com')
         session.get('https://store.steampowered.com')
 
         self.session = session
 
-        log.debug(u'Session is set')
-        log.debug(u'Saving session to file')
+        log.info(u'Session is set')
+        log.info(u'Saving session to file')
 
         self.save_session_to_file()
 
@@ -249,7 +257,9 @@ class PurchaseBot(object):
         transid = trans_json.get('transid')
 
         if not transid:
-            log.error(u'Did not receive transid from response')
+            log.error(
+                u'Did not receive transid from response. Not enough balance?'
+            )
 
             return (False, 3)
 
@@ -292,14 +302,14 @@ class PurchaseBot(object):
         except ValueError:
             log.error(u'Could not jsonify response')
 
-            return (False, 1)
+            return (False, 4)
 
         success = final_json.get('success')
 
         if not success:
             log.info('Get final price failed. Aborting')
 
-            return (False, 2)
+            return (False, 5)
 
         log.info(
             u'Received success from getfinalprice: {0}'.format(
@@ -391,37 +401,46 @@ class PurchaseBot(object):
 
         return (True, req.text)
 
-    def cart_checkout(self, clear_shopping_cart=True):
+    def cart_checkout(self, giftee_account_id, clear_shopping_cart=True):
         log.info(u'Intializing cart checkout')
 
         self.get_cart_checkout()
 
-        transaction_init = self.post_init_transaction('75266254')
+        transaction_init = self.post_init_transaction(giftee_account_id)
 
         if not transaction_init[0]:
-            return (False, transaction_init)
+            return {
+                'success': False,
+                'status': transaction_init[1]
+            }
 
         transid = transaction_init[1]
-
         transaction_price = self.get_finalprice(transid)
 
         if not transaction_price[0]:
-            return (False, transaction_price)
+            return {
+                'sucess': False,
+                'status': transaction_price[1]
+            }
 
         transaction_finalize = self.finalize_transaction(transid)
 
         if not transaction_finalize[0]:
-            return (False, transaction_finalize)
+            return {
+                'sucess': False,
+                'status': transaction_finalize[1]
+            }
 
         transaction_status = self.transaction_status(transid)
 
         if not transaction_status[0]:
-            return (False, transaction_status)
+            return {
+                'success': False,
+                'status': transaction_status[1]
+            }
 
         if clear_shopping_cart:
-            self.session.set('shoppingCartGID', None)
-
-            self.session.set(
+            self.session.cookies.set(
                 'shoppingCartGID',
                 None,
                 domain='store.steampowered.com'
@@ -429,7 +448,7 @@ class PurchaseBot(object):
 
             self.save_session_to_file()
 
-        return True
+        return {'success': True}
 
     def verify_account_email(self, token):
         req = self.session.get(
@@ -647,6 +666,23 @@ class PurchaseBot(object):
 
         matches = re.findall(
             'action="(https://bitpay.com.*?)"',
+            req.text,
+            re.DOTALL
+        )
+
+        if not len(matches):
+            return False
+
+        return matches[0]
+
+    def get_store_region(self):
+        req = self.session.get('https://store.steampowered.com/account/')
+
+        if req.status_code != 200:
+            return False
+
+        matches = re.findall(
+            '<span class="account_data_field">(.*?)</span>',
             req.text,
             re.DOTALL
         )
