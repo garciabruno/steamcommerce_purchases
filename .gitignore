@@ -7,3 +7,4 @@ steamcommerce_purchases/debug/*
 *.egg-info
 *.log
 *.pickle
+*.ipynb
