@@ -1,4 +1,5 @@
 build/*
+config.py
 *.pyc
 *.db
 steamcommerce_purchases/logs/*
