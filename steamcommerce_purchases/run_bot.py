@@ -4,7 +4,6 @@
 from steamcommerce_api.core import models
 import random
 
-import os
 import bot
 
 if __name__ == '__main__':
