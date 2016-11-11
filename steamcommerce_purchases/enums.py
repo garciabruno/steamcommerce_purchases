@@ -44,11 +44,23 @@ class ECartResult(EBotEnum):
 
 
 class EPurchaseResult(EBotEnum):
-    GetCartCheckoutFailed = 13
-    PostInitTransactionFailed = 14
-    TransIdNotFoundInResponse = 15
-    GetFinalPriceFailed = 16
-    FinalPriceUnsucceded = 17
-    PostFinalizeTransactionFailed = 18
-    GetTransactionStatusFailed = 19
-    Succeded = 20
+    ''' Responses '''
+
+    CouldNotJSONResponse = 13
+    ResponseDidNotContainSuccess = 14
+    ResponseDidNotContainTransId = 15
+    NotEnoughBalance = 16
+
+    ''' Requests '''
+
+    GetCartCheckoutFailed = 17
+    PostInitTransactionFailed = 18
+    GetFinalPriceFailed = 19
+    FinalPriceUnsucceded = 20
+    PostFinalizeTransactionFailed = 21
+    GetTransactionStatusFailed = 22
+    Succeded = 23
+
+    ''' Other '''
+
+    RaisedUnknownException = 24

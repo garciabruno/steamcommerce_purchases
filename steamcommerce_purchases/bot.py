@@ -242,16 +242,15 @@ class PurchaseBot(object):
 
         return req
 
-    def post_init_transaction(self, giftee_account_id, country_code='AR'):
+    def post_init_transaction(self, giftee_account_id, country_code):
         if not self.get_shopping_cart_gid():
             log.error(u'Tried to init transaction without shoppingCartGID')
 
             return enums.ECartResult.DidNotFindShoppingCartGid
 
         log.info(
-            u'Posting init transaction with shoppingCartGID {0} to Giftee AccountID {1}'.format(
-                self.get_shopping_cart_gid(),
-                giftee_account_id
+            u'Posting init transaction with shoppingCartGID {0}'.format(
+                self.get_shopping_cart_gid()
             )
         )
 
@@ -309,15 +308,30 @@ class PurchaseBot(object):
 
             return enums.EPurchaseResult.PostInitTransactionFailed
 
-        transid = req.json().get('transid')
+        try:
+            response = req.json()
+        except ValueError:
+            log.error(u'Could not serialize response')
+            return enums.EPurchaseResult.CouldNotJSONResponse
+        except Exception, e:
+            log.error(u'Raised unknown Exception: {0}'.format(e))
+            return enums.EPurchaseResult.RaisedUnknownException
 
-        if not transid:
+        if not response.get('success'):
+            log.error(
+                u'Did not receive success from response. Not enough balance?'
+            )
+
+            return enums.EPurchaseResult.ResponseDidNotContainSuccess
+
+        if not response.get('transid'):
             log.error(
                 u'Did not receive transid from response. Not enough balance?'
             )
 
-            return enums.EPurchaseResult.TransIdNotFoundInResponse
+            return enums.EPurchaseResult.ResponseDidNotContainTransId
 
+        transid = response.get('transid')
         log.info(u'Received transid {0}'.format(transid))
 
         return transid
@@ -346,10 +360,34 @@ class PurchaseBot(object):
 
             return enums.EPurchaseResult.GetFinalPriceFailed
 
-        if not req.json().get('success'):
-            log.info('Get final price did not receive success')
+        try:
+            response = req.json()
+        except ValueError:
+            log.error(u'Could not serialize response')
+            return enums.EPurchaseResult.CouldNotJSONResponse
+        except Exception, e:
+            log.error(u'Raised unknown Exception: {0}'.format(e))
+            return enums.EPurchaseResult.RaisedUnknownException
 
-            return enums.EPurchaseResult.FinalPriceUnsucceded
+        if not response.get('success'):
+            log.error(
+                u'Did not receive success from response. Not enough balance?'
+            )
+
+            return enums.EPurchaseResult.ResponseDidNotContainSuccess
+
+        if response.get('total') > response.get('steamAccountBalance'):
+            log.error(u'Not enough balance found in final price')
+
+            log.error(
+                u'Total: {0} AccountTotal: {1} AccountBalance: {2}'.format(
+                    response.get('total'),
+                    response.get('steamAccountTotal'),
+                    response.get('steamAccountBalance')
+                )
+            )
+
+            return enums.EPurchaseResult.NotEnoughBalance
 
         return req
 
@@ -377,6 +415,30 @@ class PurchaseBot(object):
 
             return enums.EPurchaseResult.PostFinalizeTransactionFailed
 
+        try:
+            response = req.json()
+        except ValueError:
+            log.error(u'Could not serialize response')
+            return enums.EPurchaseResult.CouldNotJSONResponse
+        except Exception, e:
+            log.error(u'Raised unknown Exception: {0}'.format(e))
+            return enums.EPurchaseResult.RaisedUnknownException
+
+        if response.get('success') != 22:
+            if response.get('success') == 1:
+                # Maybe the backend responded faster than we expected
+                # and there *shouldn't* be a reason to poll transactionstatus
+
+                return req
+
+            log.error(
+                u'Received unknown success status: {0}'.format(
+                    response.get('success')
+                )
+            )
+
+            return enums.EPurchaseResult.RaisedUnknownException
+
         return req
 
     def transaction_status(self, transid):
@@ -403,17 +465,26 @@ class PurchaseBot(object):
 
             return enums.EPurchaseResult.GetTransactionStatusFailed
 
-        return req
+        try:
+            response = req.json()
+        except ValueError:
+            log.error(u'Could not serialize response')
+            return enums.EPurchaseResult.CouldNotJSONResponse
+        except Exception, e:
+            log.error(u'Raised unknown Exception: {0}'.format(e))
+            return enums.EPurchaseResult.RaisedUnknownException
 
-    def cart_checkout(self, giftee_account_id, clear_shopping_cart=True):
+        return response.get('success')
+
+    def cart_checkout(self, giftee_account_id, country_code):
         log.info(
             u'Intializing cart checkout to giftee account id {0}'.format(
                 giftee_account_id
             )
         )
 
-        self.get_cart_checkout()
-        transid = self.post_init_transaction(giftee_account_id)
+        self.get_cart_checkout()  # Start a call just to fake things up
+        transid = self.post_init_transaction(giftee_account_id, country_code)
 
         if isinstance(transid, enums.EPurchaseResult):
             return transid
@@ -428,19 +499,27 @@ class PurchaseBot(object):
         if isinstance(transaction_finalize, enums.EPurchaseResult):
             return transaction_finalize
 
-        transaction_status = self.transaction_status(transid)
+        transaction_status = 22  # Set initial status as "PENDING"
+        attemps = 25
 
-        if isinstance(transaction_status, enums.EPurchaseResult):
-            return transaction_status
+        while transaction_status == 22 and attemps > 0:
+            # Start polling on transaction status until its either "1" or an
+            # EPurchaseResult
 
-        if clear_shopping_cart:
-            self.session.cookies.set(
-                'shoppingCartGID',
-                None,
-                domain='store.steampowered.com'
-            )
+            transaction_status = self.transaction_status(transid)
 
-            self.save_session_to_file()
+            if isinstance(transaction_status, enums.EPurchaseResult):
+                return transaction_status
+
+            attemps += 1
+
+        self.session.cookies.set(
+            'shoppingCartGID',
+            None,
+            domain='store.steampowered.com'
+        )
+
+        self.save_session_to_file()
 
         return enums.EPurchaseResult.Succeded
 
