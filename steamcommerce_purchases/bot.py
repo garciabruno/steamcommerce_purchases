@@ -15,8 +15,11 @@ import steam.webauth
 import logger
 from totp import SteamTOTP
 
+import enums
+import controller
 
-log = logger.Logger('SteamCommerce Purchases', 'purchases.log').get_logger()
+
+log = logger.Logger('Bot', 'purchases.log').get_logger()
 
 
 class PurchaseBot(object):
@@ -36,11 +39,14 @@ class PurchaseBot(object):
             self.init_session(data)
         else:
             log.info(u'Initiliazing session from pickle')
+
             self.init_session_from_file(self.pickle_path)
+
             log.info(u'Checking if session is still logged in')
 
             if not self.session_is_logged_in(data['account_name']):
                 log.info(u'Session got logged out! Re-logging in...')
+
                 self.init_session(data)
             else:
                 log.info(u'Session is still logged in')
@@ -111,13 +117,24 @@ class PurchaseBot(object):
         log.info(u'Intializing session')
 
         if self.USE_TWO_FACTOR:
-            twofactor_code = self.generate_twofactor_code(data['shared_secret'])
+            twofactor_code = self.generate_twofactor_code(
+                data['shared_secret']
+            )
+
             log.info(u'Got twofactor_code {0}'.format(twofactor_code))
 
-            user = steam.webauth.WebAuth(data['account_name'], data['password'])
+            user = steam.webauth.WebAuth(
+                data['account_name'],
+                data['password']
+            )
+
             session = user.login(twofactor_code=twofactor_code)
         else:
-            user = steam.webauth.WebAuth(data['account_name'], data['password'])
+            user = steam.webauth.WebAuth(
+                data['account_name'],
+                data['password']
+            )
+
             session = user.login()
 
         log.info(u'Logged in, retrieving store.steampowered.com')
@@ -140,6 +157,13 @@ class PurchaseBot(object):
         f.close()
 
     def add_subid_to_cart(self, subid):
+        log.info(
+            u'Adding subid {0} to cart with gid: {1}'.format(
+                subid,
+                self.get_shopping_cart_gid()
+            )
+        )
+
         req = self.session.post(
             'http://store.steampowered.com/cart/',
             data={
@@ -152,13 +176,56 @@ class PurchaseBot(object):
             }
         )
 
+        item_added = 'YOUR ITEM\'S BEEN ADDED!' in req.text
+
+        if not item_added:
+            log.error(u'Failed to add subid {0} to cart'.format(subid))
+        else:
+            self.save_session_to_file()
+            log.info(u'Succesfuly added subid {0} to cart'.format(subid))
+
+        return req
+
+    def remove_gid_from_cart(self, item_gid):
+        log.info(u'Removing cart item gid {0} from cart'.format(item_gid))
+
+        req = self.session.post(
+            'https://store.steampowered.com/cart/',
+            data={
+                'sessionid': self.session.cookies.get(
+                    'sessionid',
+                    domain='store.steampowered.com'
+                ),
+                'action': 'remove_line_item',
+                'cart': self.get_shopping_cart_gid(),
+                'lineitem_gid': item_gid
+            }
+        )
+
+        item_removed = 'YOUR ITEM HAS BEEN REMOVED!' in req.text
+
+        if not item_removed:
+            log.error(
+                u'Failed to remove cart item gid {0} from cart'.format(
+                    item_gid
+                )
+            )
+        else:
+            self.save_session_to_file()
+
+            log.info(
+                u'Succesfuly removed item gid {0} from cart'.format(
+                    item_gid
+                )
+            )
+
         return req
 
     def get_shopping_cart_gid(self):
         return self.session.cookies.get('shoppingCartGID')
 
     def get_cart_checkout(self):
-        log.debug(u'GET /checkout?purchasetype=gift')
+        log.info(u'Getting cart checkout')
 
         req = self.session.get(
             'https://store.steampowered.com/checkout/?purchasetype=gift'
@@ -166,30 +233,25 @@ class PurchaseBot(object):
 
         if req.status_code != 200:
             log.error(
-                u'GET /checkout/ FAILED. STATUS CODE {0}'.format(
+                u'Cart checkout received status code {}'.format(
                     req.status_code
                 )
             )
 
-            return (False, req.status_code)
+            return enums.EPurchaseResult.GetCartCheckoutFailed
 
-        if self.REQUESTS_DEBUG:
-            self.debug_html_to_file(
-                '%s_cart_checkout.html' % int(time.time()),
-                req.text
-            )
-
-        return (True, req)
+        return req
 
     def post_init_transaction(self, giftee_account_id, country_code='AR'):
         if not self.get_shopping_cart_gid():
             log.error(u'Tried to init transaction without shoppingCartGID')
 
-            return (False, 1)
+            return enums.ECartResult.DidNotFindShoppingCartGid
 
-        log.debug(
-            u'/inittransaction/ with shoppingCartGID {0}'.format(
-                self.get_shopping_cart_gid()
+        log.info(
+            u'Posting init transaction with shoppingCartGID {0} to Giftee AccountID {1}'.format(
+                self.get_shopping_cart_gid(),
+                giftee_account_id
             )
         )
 
@@ -240,41 +302,28 @@ class PurchaseBot(object):
 
         if req.status_code != 200:
             log.error(
-                u'POST inittransaction FAILED. STATUS CODE {0}'.format(
+                u'Init transaction received status code {0}'.format(
                     req.status_code
                 )
             )
 
-            return (False, req.status_code)
+            return enums.EPurchaseResult.PostInitTransactionFailed
 
-        try:
-            trans_json = req.json()
-        except ValueError:
-            log.error(u'Could not jsonify response')
-
-            return (False, 2)
-
-        transid = trans_json.get('transid')
+        transid = req.json().get('transid')
 
         if not transid:
             log.error(
                 u'Did not receive transid from response. Not enough balance?'
             )
 
-            return (False, 3)
+            return enums.EPurchaseResult.TransIdNotFoundInResponse
 
-        log.info(u'Created transactionid {0}'.format(transid))
+        log.info(u'Received transid {0}'.format(transid))
 
-        if self.REQUESTS_DEBUG:
-            self.debug_html_to_file(
-                '%s_init_transaction.html' % int(time.time()),
-                req.text
-            )
-
-        return (True, transid)
+        return transid
 
     def get_finalprice(self, transid):
-        log.debug(u'GET /getfinalprice/ with transid {0}'.format(transid))
+        log.info(u'Getting get final price with transid {0}'.format(transid))
 
         req = self.session.get(
             'https://store.steampowered.com/checkout/getfinalprice/',
@@ -290,44 +339,23 @@ class PurchaseBot(object):
 
         if req.status_code != 200:
             log.error(
-                u'GET /getfinalprice/ FAILED. STATUS CODE {0}'.format(
+                u'Get final price received status code {0}'.format(
                     req.status_code
                 )
             )
 
-            return (False, req.status_code)
+            return enums.EPurchaseResult.GetFinalPriceFailed
 
-        try:
-            final_json = req.json()
-        except ValueError:
-            log.error(u'Could not jsonify response')
+        if not req.json().get('success'):
+            log.info('Get final price did not receive success')
 
-            return (False, 4)
+            return enums.EPurchaseResult.FinalPriceUnsucceded
 
-        success = final_json.get('success')
-
-        if not success:
-            log.info('Get final price failed. Aborting')
-
-            return (False, 5)
-
-        log.info(
-            u'Received success from getfinalprice: {0}'.format(
-                final_json
-            )
-        )
-
-        if self.REQUESTS_DEBUG:
-            self.debug_html_to_file(
-                '%s_get_final_price.html' % int(time.time()),
-                req.text
-            )
-
-        return (True, final_json)
+        return req
 
     def finalize_transaction(self, transid):
-        log.debug(
-            u'POST /finalizetransaction/ with transid {0}'.format(
+        log.info(
+            u'Posting finalize transaction with transid {0}'.format(
                 transid
             )
         )
@@ -342,30 +370,18 @@ class PurchaseBot(object):
 
         if req.status_code != 200:
             log.error(
-                u'POST /finalizetransaction/ FAILED. STATUS CODE {0}'.format(
+                u'Finalize transaction received status code {0}'.format(
                     req.status_code
                 )
             )
 
-            return (False, req.status_code)
+            return enums.EPurchaseResult.PostFinalizeTransactionFailed
 
-        log.info(
-            u'Received success from finalizetransaction: {0}'.format(
-                req.text
-            )
-        )
-
-        if self.REQUESTS_DEBUG:
-            self.debug_html_to_file(
-                '%s_finilize_transaction.html' % int(time.time()),
-                req.text
-            )
-
-        return (True, req.text)
+        return req
 
     def transaction_status(self, transid):
-        log.debug(
-            u'POST /transactionstatus/ with transid {0}'.format(
+        log.info(
+            u'Getting transaction status with transid {0}'.format(
                 transid
             )
         )
@@ -380,64 +396,42 @@ class PurchaseBot(object):
 
         if req.status_code != 200:
             log.error(
-                u'GET /transactionstatus/ FAILED. STATUS CODE {0}'.format(
+                u'Transaction status received status code {0}'.format(
                     req.status_code
                 )
             )
 
-            return (False, req.status_code)
+            return enums.EPurchaseResult.GetTransactionStatusFailed
 
+        return req
+
+    def cart_checkout(self, giftee_account_id, clear_shopping_cart=True):
         log.info(
-            u'Received success from transactionstatus: {0}'.format(
-                req.text
+            u'Intializing cart checkout to giftee account id {0}'.format(
+                giftee_account_id
             )
         )
 
-        if self.REQUESTS_DEBUG:
-            self.debug_html_to_file(
-                '%s_transaction_status.html' % int(time.time()),
-                req.text
-            )
-
-        return (True, req.text)
-
-    def cart_checkout(self, giftee_account_id, clear_shopping_cart=True):
-        log.info(u'Intializing cart checkout')
-
         self.get_cart_checkout()
+        transid = self.post_init_transaction(giftee_account_id)
 
-        transaction_init = self.post_init_transaction(giftee_account_id)
+        if isinstance(transid, enums.EPurchaseResult):
+            return transid
 
-        if not transaction_init[0]:
-            return {
-                'success': False,
-                'status': transaction_init[1]
-            }
-
-        transid = transaction_init[1]
         transaction_price = self.get_finalprice(transid)
 
-        if not transaction_price[0]:
-            return {
-                'sucess': False,
-                'status': transaction_price[1]
-            }
+        if isinstance(transaction_price, enums.EPurchaseResult):
+            return transaction_price
 
         transaction_finalize = self.finalize_transaction(transid)
 
-        if not transaction_finalize[0]:
-            return {
-                'sucess': False,
-                'status': transaction_finalize[1]
-            }
+        if isinstance(transaction_finalize, enums.EPurchaseResult):
+            return transaction_finalize
 
         transaction_status = self.transaction_status(transid)
 
-        if not transaction_status[0]:
-            return {
-                'success': False,
-                'status': transaction_status[1]
-            }
+        if isinstance(transaction_status, enums.EPurchaseResult):
+            return transaction_status
 
         if clear_shopping_cart:
             self.session.cookies.set(
@@ -448,7 +442,7 @@ class PurchaseBot(object):
 
             self.save_session_to_file()
 
-        return {'success': True}
+        return enums.EPurchaseResult.Succeded
 
     def verify_account_email(self, token):
         req = self.session.get(
@@ -544,7 +538,13 @@ class PurchaseBot(object):
 
         return data['success'] and data['state'] == 'done'
 
-    def add_funds(self, amount, method='bitcoin', country='AR', currency='USD'):
+    def add_funds(
+        self,
+        amount,
+        method='bitcoin',
+        country='AR',
+        currency='USD'
+    ):
         req = self.session.post(
             'http://store.steampowered.com/steamaccount/addfundssubmit',
             data={
@@ -675,8 +675,9 @@ class PurchaseBot(object):
 
         return matches[0]
 
-    def get_store_region(self):
-        req = self.session.get('https://store.steampowered.com/account/')
+    def get_store_region(self, req=None):
+        if not req:
+            req = self.session.get('https://store.steampowered.com/account/')
 
         if req.status_code != 200:
             return False
@@ -691,6 +692,54 @@ class PurchaseBot(object):
             return False
 
         return matches[0]
+
+    def get_account_balance(self, req=None):
+        if not req:
+            req = self.session.get('https://store.steampowered.com')
+
+        if req.status_code != 200:
+            return False
+
+        matches = re.findall(
+            '<a class="global_action_link" id="header_wallet_balance" href="https://store.steampowered.com/account/store_transactions/">(.*?)</a>',
+            req.text,
+            re.DOTALL
+        )
+
+        if not len(matches):
+            return False
+
+        return matches[0]
+
+    def get_cart_count(self, req=None):
+        if not req:
+            req = self.session.get('https://store.steampowered.com')
+
+        matches = re.findall(
+            '<span id="cart_item_count_value">([0-9]+)</span>',
+            req.text,
+            re.DOTALL
+        )
+
+        if not len(matches):
+            return 0
+
+        return int(matches[0])
+
+    def sync_data(self, bot_id, req=None):
+        if not req:
+            req = self.session.get('https://store.steampowered.com')
+
+        account_balance = self.get_account_balance(req=req)
+        cart_count = self.get_cart_count(req=req)
+
+        data = {
+            'id': bot_id,
+            'account_balance': account_balance if account_balance else None,
+            'current_cart_count': cart_count
+        }
+
+        return controller.BotController().update(**data)
 
 
 class RegisterBot(object):
@@ -778,3 +827,21 @@ class RegisterBot(object):
             return None
 
         return req.json()['bSuccess']
+
+
+def get_purchasebot(bot_obj):
+    if bot_obj.current_state != enums.EBotState.StandingBy:
+        return enums.EBotResult.NotBotAvailableFound
+
+    purchasebot = PurchaseBot(
+        data_path=os.path.join(
+            os.getcwd(), 'data', bot_obj.data_filename
+        ),
+        pickle_path=os.path.join(
+            os.getcwd(), 'data', bot_obj.session_filename
+        )
+    )
+
+    purchasebot.init_bot()
+
+    return purchasebot
