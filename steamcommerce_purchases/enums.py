@@ -27,40 +27,42 @@ class EBotState(EBotEnum):
     PurchasingCart = 3
     WaitingForSufficientFunds = 4
     BlockedForTooManyPurchases = 5
+    BlockedForUnknownReason = 6
 
 
 class EBotResult(EBotEnum):
-    NotBotAvailableFound = 6
-    RaisedUnknownException = 7
-    ReachedMaxCartCount = 8
-    ReachedMaxCartTimespan = 9
-    Succeded = 10
+    NotBotAvailableFound = 7
+    RaisedUnknownException = 8
+    ReachedMaxCartCount = 9
+    ReachedMaxCartTimespan = 10
+    Succeded = 11
 
 
 class ECartResult(EBotEnum):
-    UnableToRetrieveCartFromCrawler = 10
-    UnableToRetrieveCartItemGid = 11
-    DidNotFindShoppingCartGid = 12
+    UnableToRetrieveCartFromCrawler = 11
+    UnableToRetrieveCartItemGid = 12
+    DidNotFindShoppingCartGid = 13
 
 
 class EPurchaseResult(EBotEnum):
     ''' Responses '''
 
-    CouldNotJSONResponse = 13
-    ResponseDidNotContainSuccess = 14
-    ResponseDidNotContainTransId = 15
-    NotEnoughBalance = 16
+    CouldNotJSONResponse = 14
+    ResponseDidNotContainSuccess = 15
+    ResponseDidNotContainTransId = 16
+    InsufficientFunds = 17
 
     ''' Requests '''
 
-    GetCartCheckoutFailed = 17
-    PostInitTransactionFailed = 18
-    GetFinalPriceFailed = 19
-    FinalPriceUnsucceded = 20
-    PostFinalizeTransactionFailed = 21
-    GetTransactionStatusFailed = 22
-    Succeded = 23
+    GetCartCheckoutFailed = 18
+    PostInitTransactionFailed = 19
+    GetFinalPriceFailed = 20
+    FinalPriceUnsucceded = 21
+    PostFinalizeTransactionFailed = 22
+    GetTransactionStatusFailed = 23
+    Succeded = 24
 
     ''' Other '''
 
-    RaisedUnknownException = 24
+    RaisedUnknownException = 25
+    ReachedMaximumPollAttemps = 26
