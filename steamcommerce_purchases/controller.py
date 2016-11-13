@@ -69,14 +69,24 @@ class BotController(object):
             return enums.EBotResult.RaisedUnknownException
 
     def set_last_cart_push(self, bot_id):
-        return self.update(
-            **{
-                'id': bot_id,
-                'last_cart_push': datetime.datetime.now()
-            }
-        )
+        return self.update(**{
+            'id': bot_id,
+            'last_cart_push': datetime.datetime.now()
+        })
+
+    def set_last_cart_purchase(self, bot_id):
+        return self.update(**{
+            'id': bot_id,
+            'last_cart_purchase': datetime.datetime.now()
+        })
+
+    def set_last_failed_cart_purchase(self, bot_id):
+        return self.update(**{
+            'id': bot_id,
+            'last_failed_purchase': datetime.datetime.now()
+        })
 
     def set_bot_state(self, bot_id, state):
-        params = {'id': bot_id, 'state': state}
+        params = {'id': bot_id, 'current_state': state}
 
         return self.update(**params)
