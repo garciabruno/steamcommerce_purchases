@@ -114,6 +114,7 @@ def cart_add():
         return response
 
     purchasebot = bot.get_purchasebot(bot_obj)
+    response.update({'id': bot_obj.id})
 
     if purchasebot == enums.EBotResult.NotBotAvailableFound:
         response.update({
@@ -123,12 +124,23 @@ def cart_add():
         return response
 
     results = []
+
+    controller.BotController().set_bot_state(
+        bot_obj.id,
+        enums.EBotState.PushingItemsToCart.value
+    )
+
     current_cart_count = bot_obj.current_cart_count
 
     if current_cart_count >= bot_obj.max_cart_until_purchase:
+        controller.BotController().set_bot_state(
+            bot_obj.id,
+            enums.EBotState.StandingBy.value
+        )
+
         response.update({
             'items': results,
-            'result': enums.ECartResult.ReachedMaxCartCount
+            'result': enums.EBotResult.ReachedMaxCartCount
         })
 
         return response
@@ -188,6 +200,11 @@ def cart_add():
                         enums.ECartResult.UnableToRetrieveCartFromCrawler
                     })
 
+                    controller.BotController().set_bot_state(
+                        bot_obj.id,
+                        enums.EBotState.StandingBy.value
+                    )
+
                     return response
 
                 cart_item_gid_matches = re.findall(
@@ -201,6 +218,11 @@ def cart_add():
                         'items': results,
                         'result': enums.ECartResult.UnableToRetrieveCartItemGid
                     })
+
+                    controller.BotController().set_bot_state(
+                        bot_obj.id,
+                        enums.EBotState.StandingBy.value
+                    )
 
                     return response
 
@@ -224,6 +246,11 @@ def cart_add():
                     'result': enums.EBotResult.ReachedMaxCartCount
                 })
 
+                controller.BotController().set_bot_state(
+                    bot_obj.id,
+                    enums.EBotState.StandingBy.value
+                )
+
                 return response
 
     # This is intentionally old data
@@ -239,12 +266,22 @@ def cart_add():
             'result': enums.EBotResult.ReachedMaxCartTimespan
         })
 
+        controller.BotController().set_bot_state(
+            bot_obj.id,
+            enums.EBotState.StandingBy.value
+        )
+
         return response
 
     response.update({
         'items': results,
         'result': enums.EBotResult.Succeded
     })
+
+    controller.BotController().set_bot_state(
+        bot_obj.id,
+        enums.EBotState.StandingBy.value
+    )
 
     return response
 
@@ -289,4 +326,62 @@ def bot_cart_info(bot_id):
             'remove_button': cart_item.remove_button
         })
 
+    purchasebot.sync_data(bot_obj.id, req=req)
+
     return response
+
+
+@app.route('/bot/cart/checkout/', methods=['POST'])
+@as_json
+def bot_cart_checkout():
+    bot_id = request.form.get('bot_id')
+    country_code = request.form.get('country_code')
+    giftee_account_id = request.form.get('giftee_account_id')
+
+    if not bot_id:
+        return enums.EBotResult.NotBotAvailableFound
+
+    if not giftee_account_id or not country_code:
+        return enums.EBotResult.RaisedUnknownException
+
+    bot_obj = controller.BotController().get_bot_id(int(bot_id))
+
+    if not isinstance(bot_obj, controller.BotController().model):
+        return bot_obj
+
+    purchasebot = bot.get_purchasebot(bot_obj)
+
+    if not isinstance(purchasebot, bot.PurchaseBot):
+        return purchasebot
+
+    controller.BotController().set_bot_state(
+        bot_obj.id,
+        enums.EBotState.PurchasingCart.value
+    )
+
+    purchase_result = purchasebot.cart_checkout(
+        giftee_account_id,
+        country_code
+    )
+
+    if purchase_result == enums.EPurchaseResult.InsufficientFunds:
+        controller.BotController().set_bot_state(
+            bot_obj.id,
+            enums.EBotState.WaitingForSufficientFunds.value
+        )
+    elif purchasebot == enums.EPurchaseResult.Succeded:
+        purchasebot.sync_data(bot_obj.id)
+
+        controller.BotController().set_last_cart_purchase(bot_obj.id)
+
+        controller.BotController().set_bot_state(
+            bot_obj.id,
+            enums.EBotState.StandingBy.value
+        )
+    else:
+        controller.BotController().set_bot_state(
+            bot_obj.id,
+            enums.EBotState.BlockedForUnknownReason.value
+        )
+
+    return purchase_result
