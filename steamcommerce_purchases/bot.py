@@ -3,7 +3,6 @@
 
 import os
 import re
-import time
 import json
 import pickle
 import urllib
@@ -387,7 +386,7 @@ class PurchaseBot(object):
                 )
             )
 
-            return enums.EPurchaseResult.NotEnoughBalance
+            return enums.EPurchaseResult.InsufficientFunds
 
         return req
 
@@ -511,7 +510,10 @@ class PurchaseBot(object):
             if isinstance(transaction_status, enums.EPurchaseResult):
                 return transaction_status
 
-            attemps += 1
+            attemps -= 1
+
+        if transaction_status == 22 and attemps <= 0:
+            return enums.EPurchaseResult.ReachedMaximumPollAttemps
 
         self.session.cookies.set(
             'shoppingCartGID',
