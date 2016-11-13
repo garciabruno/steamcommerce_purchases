@@ -20,7 +20,7 @@ class SteamCartItem(demiurge.Item):
     )
 
     price = demiurge.TextField(
-        selector='div.cart_item_price div.price'
+        selector='div.cart_item_price div.price:last'
     )
 
     remove_button = demiurge.AttributeValueField(
