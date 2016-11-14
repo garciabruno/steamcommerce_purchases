@@ -369,7 +369,7 @@ def bot_cart_checkout():
             bot_obj.id,
             enums.EBotState.WaitingForSufficientFunds.value
         )
-    elif purchasebot == enums.EPurchaseResult.Succeded:
+    elif purchase_result == enums.EPurchaseResult.Succeded:
         purchasebot.sync_data(bot_obj.id)
 
         controller.BotController().set_last_cart_purchase(bot_obj.id)
