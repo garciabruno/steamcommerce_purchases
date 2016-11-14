@@ -165,7 +165,7 @@ class Commander(object):
                 continue
 
             results[currency].append({
-                'relation_type': 1,
+                'relation_type': 2,
                 'relation_id': relation.id,
                 'subid': int(
                     relation.product.store_sub_id or relation.product.sub_id
@@ -299,34 +299,29 @@ class Commander(object):
                 )
             )
 
-            userrequest_relations = self.userrequest_relation.select().where(
+            self.userrequest_relation.update(
+                commited_on_bot=None,
+                shopping_cart_gid=None,
+                commitment_level=enums.ECommitLevel.Uncommited.value,
+            ).where(
                 self.userrequest_relation.shopping_cart_gid == failed_gid,
                 self.userrequest_relation.commitment_level ==
                 enums.ECommitLevel.AddedToCart.value,
                 self.userrequest_relation.sent == False
-            )
+            ).execute()
 
-            paidrequest_relations = self.paidrequest_relation.select().where(
+            self.paidrequest_relation.update(
+                commited_on_bot=None,
+                shopping_cart_gid=None,
+                commitment_level=enums.ECommitLevel.Uncommited.value
+            ).where(
                 self.paidrequest_relation.shopping_cart_gid == failed_gid,
                 self.paidrequest_relation.commitment_level ==
                 enums.ECommitLevel.AddedToCart.value,
                 self.paidrequest_relation.sent == False
-            )
+            ).execute()
 
-            for relation in userrequest_relations:
-                userrequest.UserRequest().set_commitment(
-                    relation.id,
-                    enums.ECommitLevel.Uncommited.value,
-                    None,
-                    shopping_cart_gid=None
-                )
-
-            for relation in paidrequest_relations:
-                paidrequest.PaidRequest().set_commitment(
-                    relation.id,
-                    enums.ECommitLevel.Uncommited.value,
-                    None,
-                    shopping_cart_gid=None
-                )
+            userrequest.UserRequest().flush_relations()
+            paidrequest.PaidRequest().flush_relations()
 
         return results
