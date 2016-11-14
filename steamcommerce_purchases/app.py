@@ -257,7 +257,7 @@ def cart_add():
 
     minutes_since_last_push = (
         datetime.datetime.now() -
-        (bot_obj.last_cart_push or datetime.datetime.now)
+        (bot_obj.last_cart_push or datetime.datetime.now())
     ).total_seconds() / 60
 
     if minutes_since_last_push >= bot_obj.max_timespan_until_purchase:
