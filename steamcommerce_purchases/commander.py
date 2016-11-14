@@ -83,7 +83,7 @@ class Commander(object):
                 results[currency] = []
 
             if (
-                not relation.product.store_sub_id or
+                not relation.product.store_sub_id and
                 not relation.product.sub_id
             ):
                 log.error(
@@ -145,7 +145,7 @@ class Commander(object):
                 results[currency] = []
 
             if (
-                not relation.product.store_sub_id or
+                not relation.product.store_sub_id and
                 not relation.product.sub_id
             ):
                 log.error(
