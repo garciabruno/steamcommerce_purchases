@@ -20,7 +20,29 @@ class Commander(object):
         self.paidrequest_relation = models.ProductPaidRequestRelation
 
         self.ADMIN_ID = config.ADMIN_ID
-        self.BOTS = config.BOTS
+
+    def get_commited_store_subids(self):
+        userrequest_relations = self.userrequest_relation.select().where(
+            self.userrequest_relation.commitment_level ==
+            enums.ECommitLevel.AddedToCart.value
+        )
+
+        paidrequest_relations = self.paidrequest_relation.select().where(
+            self.paidrequest_relation.commitment_level ==
+            enums.ECommitLevel.AddedToCart.value
+        )
+
+        subids = []
+
+        for relation in userrequest_relations:
+            if relation.product.store_sub_id:
+                subids.append(relation.product.store_sub_id)
+
+        for relation in paidrequest_relations:
+            if relation.product.store_sub_id:
+                subids.append(relation.product.store_sub_id)
+
+        return subids
 
     def get_pending_userrequest_relations(self):
         relations = self.userrequest_relation.select().join(
@@ -34,6 +56,8 @@ class Commander(object):
             self.userrequest_relation.commitment_level ==
             enums.ECommitLevel.Uncommited.value
         )
+
+        commited_store_subids = self.get_commited_store_subids()
 
         log.info(
             u'Found {0} pending userrequest relations'.format(
@@ -63,6 +87,9 @@ class Commander(object):
 
                 continue
 
+            if relation.product.store_sub_id in commited_store_subids:
+                continue
+
             results[currency].append({
                 'relation_type': 1,
                 'relation_id': relation.id,
@@ -83,6 +110,8 @@ class Commander(object):
             self.paidrequest_relation.commitment_level ==
             enums.ECommitLevel.Uncommited.value
         )
+
+        commited_store_subids = self.get_commited_store_subids()
 
         log.info(
             u'Found {0} pending paidrequest relations'.format(
@@ -110,6 +139,9 @@ class Commander(object):
 
                 # TODO: Call task for relation.product.id ?
 
+                continue
+
+            if relation.product.store_sub_id in commited_store_subids:
                 continue
 
             results[currency].append({
@@ -187,6 +219,21 @@ class Commander(object):
                     results['id'],
                     shopping_cart_gid=item.get('shoppingCartGid')
                 )
+
+                request_id = self.userrequest_relation.get(
+                    id=item.get('relation_id')
+                ).request_id
+
+                log.info(
+                    u'Assigning admin to UserRequest id {0}'.format(
+                        request_id
+                    )
+                )
+
+                userrequest.UserRequest().assign(
+                    request_id,
+                    config.ADMIN_ID
+                )
             elif item.get('relation_type') == 2:
                 log.info(
                     u'Commiting PaidRequest relation id {0}'.format(
@@ -199,6 +246,21 @@ class Commander(object):
                     enums.ECommitLevel.AddedToCart.value,
                     results['id'],
                     shopping_cart_gid=item.get('shoppingCartGid')
+                )
+
+                request_id = self.paidrequest_relation.get(
+                    id=item.get('relation_id')
+                ).request_id
+
+                log.info(
+                    u'Assigning admin to PaidRequest id {0}'.format(
+                        request_id
+                    )
+                )
+
+                paidrequest.PaidRequest().assign(
+                    request_id,
+                    config.ADMIN_ID
                 )
 
         if not 'failed_gids' in results.keys():
@@ -222,6 +284,13 @@ class Commander(object):
                 self.userrequest_relation.sent == False
             )
 
+            paidrequest_relations = self.paidrequest_relation.select().where(
+                self.paidrequest_relation.shopping_cart_gid == failed_gid,
+                self.paidrequest_relation.commitment_level ==
+                enums.ECommitLevel.AddedToCart.value,
+                self.paidrequest_relation.sent == False
+            )
+
             for relation in userrequest_relations:
                 userrequest.UserRequest().set_commitment(
                     relation.id,
@@ -229,13 +298,6 @@ class Commander(object):
                     None,
                     shopping_cart_gid=None
                 )
-
-            paidrequest_relations = self.paidrequest_relation.select().where(
-                self.paidrequest_relation.shopping_cart_gid == failed_gid,
-                self.paidrequest_relation.commitment_level ==
-                enums.ECommitLevel.AddedToCart.value,
-                self.paidrequest_relation.sent == False
-            )
 
             for relation in paidrequest_relations:
                 paidrequest.PaidRequest().set_commitment(

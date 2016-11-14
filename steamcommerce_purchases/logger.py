@@ -15,8 +15,6 @@ class Logger(object):
 
     def get_logger(self, debug=True, stdout=True, fdout=True):
         log = logging.getLogger(self.name)
-        log.handlers = []
-        log.propagate = False
 
         if debug:
             log.setLevel(logging.DEBUG)
