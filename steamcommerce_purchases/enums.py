@@ -66,3 +66,9 @@ class EPurchaseResult(EBotEnum):
 
     RaisedUnknownException = 25
     ReachedMaximumPollAttemps = 26
+
+
+class ECommitLevel(EBotEnum):
+    Uncommited = 0
+    AddedToCart = 1
+    Purchased = 2
