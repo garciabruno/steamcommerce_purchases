@@ -35,12 +35,18 @@ class Commander(object):
         subids = []
 
         for relation in userrequest_relations:
-            if relation.product.store_sub_id:
-                subids.append(relation.product.store_sub_id)
+            if relation.product.store_sub_id or relation.product.sub_id:
+                subids.append(
+                    relation.product.store_sub_id or
+                    relation.product.sub_id
+                )
 
         for relation in paidrequest_relations:
-            if relation.product.store_sub_id:
-                subids.append(relation.product.store_sub_id)
+            if relation.product.store_sub_id or relation.product.sub_id:
+                subids.append(
+                    relation.product.store_sub_id or
+                    relation.product.sub_id
+                )
 
         return subids
 
@@ -76,9 +82,12 @@ class Commander(object):
             if not currency in results.keys():
                 results[currency] = []
 
-            if not relation.product.store_sub_id:
+            if (
+                not relation.product.store_sub_id or
+                not relation.product.sub_id
+            ):
                 log.error(
-                    u'Product id {0} did not contain store_sub_id'.format(
+                    u'Product id {0} did not contain sub id'.format(
                         relation.product.id
                     )
                 )
@@ -87,13 +96,18 @@ class Commander(object):
 
                 continue
 
-            if relation.product.store_sub_id in commited_store_subids:
+            if (
+                relation.product.store_sub_id in commited_store_subids or
+                relation.product.sub_id in commited_store_subids
+            ):
                 continue
 
             results[currency].append({
                 'relation_type': 1,
                 'relation_id': relation.id,
-                'subid': int(relation.product.store_sub_id),
+                'subid': int(
+                    relation.product.store_sub_id or relation.product.sub_id
+                ),
             })
 
         return results
@@ -130,9 +144,12 @@ class Commander(object):
             if not currency in results.keys():
                 results[currency] = []
 
-            if not relation.product.store_sub_id:
+            if (
+                not relation.product.store_sub_id or
+                not relation.product.sub_id
+            ):
                 log.error(
-                    u'Product id {} did not contain store_sub_id'.format(
+                    u'Product id {0} did not contain sub id'.format(
                         relation.product.id
                     )
                 )
@@ -141,13 +158,18 @@ class Commander(object):
 
                 continue
 
-            if relation.product.store_sub_id in commited_store_subids:
+            if (
+                relation.product.store_sub_id in commited_store_subids or
+                relation.product.sub_id in commited_store_subids
+            ):
                 continue
 
             results[currency].append({
-                'relation_type': 2,
+                'relation_type': 1,
                 'relation_id': relation.id,
-                'subid': int(relation.product.store_sub_id)
+                'subid': int(
+                    relation.product.store_sub_id or relation.product.sub_id
+                ),
             })
 
         return results
