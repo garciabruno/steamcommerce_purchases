@@ -183,32 +183,7 @@ def cart_add():
 
             response['failed_gids'].append(last_shopping_cart_gid)
 
-        if (
-            purchasebot.get_shopping_cart_gid() != last_shopping_cart_gid
-            and last_shopping_cart_gid is not None
-        ):
-            bot.log.info(
-                u'shoppingCartGid {0} appears to have been reset'.format(
-                    last_shopping_cart_gid
-                )
-            )
-
-            bot.log.info(
-                u'Removing all items with shoppingCartGid {0}'.format(
-                    last_shopping_cart_gid
-                )
-            )
-
-            results = filter(
-                lambda x: x['shoppingCartGid'] != last_shopping_cart_gid,
-                results
-            )
-
-            if not 'failed_gids' in response.keys():
-                response['failed_gids'] = []
-
-            response['failed_gids'].append(last_shopping_cart_gid)
-        elif item_added:
+        if item_added:
             if not CHECKOUT_LINK in req.text:
                 bot.log.info(
                     u'Subid {0} caused cart not to be gifteable'.format(
@@ -286,6 +261,32 @@ def cart_add():
                 )
 
                 return response
+
+    if (
+        purchasebot.get_shopping_cart_gid() != last_shopping_cart_gid
+        and last_shopping_cart_gid is not None
+    ):
+        bot.log.info(
+            u'shoppingCartGid {0} appears to have been reset'.format(
+                last_shopping_cart_gid
+            )
+        )
+
+        bot.log.info(
+            u'Removing all items with shoppingCartGid {0}'.format(
+                last_shopping_cart_gid
+            )
+        )
+
+        results = filter(
+            lambda x: x['shoppingCartGid'] != last_shopping_cart_gid,
+            results
+        )
+
+        if not 'failed_gids' in response.keys():
+            response['failed_gids'] = []
+
+        response['failed_gids'].append(last_shopping_cart_gid)
 
     # This is intentionally old data
 
