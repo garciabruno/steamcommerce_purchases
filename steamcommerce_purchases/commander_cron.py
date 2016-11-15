@@ -109,7 +109,7 @@ for currency in relations.keys():
     ):
         log.info(
             u'Received {0}, calling bot to checkout cart'.format(
-                result.__repr__()
+                enums.EBotResult(result).__repr__()
             )
         )
 
@@ -144,7 +144,7 @@ for currency in relations.keys():
         reply = enums.EPurchaseResult(int(req.text))
 
         log.info(
-            u'Received {} from {1} ({2})'.format(
+            u'Received {0} from {1} ({2})'.format(
                 reply.__repr__(),
                 BOTS[currency],
                 currency
