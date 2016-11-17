@@ -74,6 +74,8 @@ for currency in relations.keys():
             )
         )
 
+        continue
+
     try:
         reply = enums.EBotResult(response.get('result'))
     except ValueError:
