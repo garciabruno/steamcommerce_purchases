@@ -39,33 +39,33 @@ class EBotResult(EBotEnum):
 
 
 class ECartResult(EBotEnum):
-    UnableToRetrieveCartFromCrawler = 11
-    UnableToRetrieveCartItemGid = 12
-    DidNotFindShoppingCartGid = 13
+    UnableToRetrieveCartFromCrawler = 12
+    UnableToRetrieveCartItemGid = 13
+    DidNotFindShoppingCartGid = 14
 
 
 class EPurchaseResult(EBotEnum):
     ''' Responses '''
 
-    CouldNotJSONResponse = 14
-    ResponseDidNotContainSuccess = 15
-    ResponseDidNotContainTransId = 16
-    InsufficientFunds = 17
+    CouldNotJSONResponse = 15
+    ResponseDidNotContainSuccess = 16
+    ResponseDidNotContainTransId = 17
+    InsufficientFunds = 18
 
     ''' Requests '''
 
-    GetCartCheckoutFailed = 18
-    PostInitTransactionFailed = 19
-    GetFinalPriceFailed = 20
-    FinalPriceUnsucceded = 21
-    PostFinalizeTransactionFailed = 22
-    GetTransactionStatusFailed = 23
-    Succeded = 24
+    GetCartCheckoutFailed = 19
+    PostInitTransactionFailed = 20
+    GetFinalPriceFailed = 21
+    FinalPriceUnsucceded = 22
+    PostFinalizeTransactionFailed = 23
+    GetTransactionStatusFailed = 24
+    Succeded = 25
 
     ''' Other '''
 
-    RaisedUnknownException = 25
-    ReachedMaximumPollAttemps = 26
+    RaisedUnknownException = 26
+    ReachedMaximumPollAttemps = 27
 
 
 class ECommitLevel(EBotEnum):
