@@ -31,7 +31,10 @@ class Commander(object):
             for relation in userrequest_data.get('userrequest_relations'):
                 if (
                     relation.get('product').get('store_sub_id') or
-                    relation.get('product').get('sub_id')
+                    relation.get('product').get('sub_id') and
+                    relation.get('commitment_level') ==
+                    enums.ECommitLevel.AddedToCart and not
+                    relation.get('sent')
                 ):
                     subids.append(
                         relation.get('product').get('store_sub_id') or
@@ -42,7 +45,10 @@ class Commander(object):
             for relation in paidrequest_data.get('paidrequest_relations'):
                 if (
                     relation.get('product').get('store_sub_id') or
-                    relation.get('product').get('sub_id')
+                    relation.get('product').get('sub_id') and
+                    relation.get('commitment_level') ==
+                    enums.ECommitLevel.AddedToCart and not
+                    relation.get('sent')
                 ):
                     subids.append(
                         relation.get('product').get('store_sub_id') or
