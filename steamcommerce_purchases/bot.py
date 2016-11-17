@@ -155,7 +155,7 @@ class PurchaseBot(object):
         f.write(content.encode('utf-8'))
         f.close()
 
-    def add_subid_to_cart(self, subid):
+    def add_subid_to_cart(self, subid, prev_count=None):
         log.info(
             u'Adding subid {0} to cart with gid: {1}'.format(
                 subid,
@@ -175,7 +175,11 @@ class PurchaseBot(object):
             }
         )
 
-        item_added = 'YOUR ITEM\'S BEEN ADDED!' in req.text
+        if prev_count is None:
+            item_added = 'YOUR ITEM\'S BEEN ADDED!' in req.text
+        else:
+            curr_count = self.get_cart_count(req=req)
+            item_added = curr_count > prev_count
 
         if not item_added:
             log.error(u'Failed to add subid {0} to cart'.format(subid))
@@ -183,7 +187,7 @@ class PurchaseBot(object):
             self.save_session_to_file()
             log.info(u'Succesfuly added subid {0} to cart'.format(subid))
 
-        return req
+        return (item_added, req)
 
     def remove_gid_from_cart(self, item_gid):
         log.info(u'Removing cart item gid {0} from cart'.format(item_gid))
@@ -912,7 +916,7 @@ class RegisterBot(object):
 
 def get_purchasebot(bot_obj):
     if bot_obj.current_state != enums.EBotState.StandingBy:
-        return enums.EBotResult.NotBotAvailableFound
+        return enums.EBotState.NotBotAvailableFound
 
     purchasebot = PurchaseBot(
         data_path=os.path.join(

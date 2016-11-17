@@ -72,3 +72,4 @@ class ECommitLevel(EBotEnum):
     Uncommited = 0
     AddedToCart = 1
     Purchased = 2
+    FailedToAddToCart = 3

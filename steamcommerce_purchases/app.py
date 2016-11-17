@@ -8,6 +8,7 @@ import datetime
 
 from flask import Flask
 from flask import request
+from flask import render_template
 
 from functools import wraps
 
@@ -48,11 +49,11 @@ def as_json(f):
 
 
 @app.route('/bots/report/')
-@as_json
 def bots_report():
     bots = controller.BotController().get_bots()
+    bots_data = [x._data for x in bots]
 
-    return [x._data for x in bots]
+    return render_template('bots.html', bots=bots_data)
 
 
 @app.route('/bots/sync/')
@@ -148,8 +149,13 @@ def cart_add():
     for item in items:
         last_shopping_cart_gid = purchasebot.get_shopping_cart_gid()
 
-        req = purchasebot.add_subid_to_cart(item['subid'])
-        item_added = 'YOUR ITEM\'S BEEN ADDED!' in req.text
+        cart_push = purchasebot.add_subid_to_cart(
+            item['subid'],
+            prev_count=current_cart_count
+        )
+
+        item_added = cart_push[0]
+        req = cart_push[1]
 
         if (
             purchasebot.get_shopping_cart_gid() != last_shopping_cart_gid
@@ -183,76 +189,71 @@ def cart_add():
 
             response['failed_gids'].append(last_shopping_cart_gid)
 
-        if item_added:
-            if not CHECKOUT_LINK in req.text:
+            current_cart_count = 0
+
+            bot_obj.current_cart_count = 0
+            bot_obj.save()
+
+        if not item_added:
+            bot.log.error(
+                u'Subid {0} was not added to the cart'.format(item['subid'])
+            )
+
+            bot.log.info(
+                u'Checking if shoppingCartGid still exists'
+            )
+
+            check_req = purchasebot.session.get(
+                'https://store.steampowered.com'
+            )
+
+            if (
+                'Set-Cookie' in check_req.headers.keys() and
+                'shoppingCartGID=deleted' in check_req.headers['Set-Cookie']
+            ):
+                bot.log.info(u'Cart has been deleted')
+
                 bot.log.info(
-                    u'Subid {0} caused cart not to be gifteable'.format(
-                        item.get('subid')
+                    u'Removing all items with shoppingCartGid {0}'.format(
+                        last_shopping_cart_gid
                     )
                 )
 
-                carts = crawler_items.SteamCart.all_from(req.text)
+                results = filter(
+                    lambda x: x['shoppingCartGid'] != last_shopping_cart_gid,
+                    results
+                )
 
-                if not len(carts):
-                    response.update({
-                        'items': results,
-                        'result':
-                        enums.ECartResult.UnableToRetrieveCartFromCrawler
-                    })
+                if not 'failed_gids' in response.keys():
+                    response['failed_gids'] = []
 
-                    controller.BotController().set_bot_state(
-                        bot_obj.id,
-                        enums.EBotState.StandingBy.value
-                    )
+                response['failed_gids'].append(last_shopping_cart_gid)
 
-                    return response
+                if not 'failed_subs' in response.keys():
+                    response['failed_subs'] = []
 
-                try:
-                    cart_item_gid_matches = re.findall(
-                        r'([0-9]+)',
-                        carts[0].items[0].remove_button,
-                        re.DOTALL
-                    )
-                except IndexError:
-                    bot.log.error(
-                        u'IndexError on cart gid matches: {0}'.format(
-                            purchasebot.get_shopping_cart_gid()
-                        )
-                    )
+                response['failed_subs'].append(item.get('subid'))
 
-                    continue
-
-                if not len(cart_item_gid_matches):
-                    response.update({
-                        'items': results,
-                        'result': enums.ECartResult.UnableToRetrieveCartItemGid
-                    })
-
-                    controller.BotController().set_bot_state(
-                        bot_obj.id,
-                        enums.EBotState.StandingBy.value
-                    )
-
-                    return response
-
-                cartitem_gid = cart_item_gid_matches[0]
-
-                purchasebot.remove_gid_from_cart(cartitem_gid)
-
-                continue
+                current_cart_count = 0
 
             purchasebot.sync_data(bot_obj.id, req=req)
-            controller.BotController().set_last_cart_push(bot_obj.id)
 
-            result = dict(item)
-            result['shoppingCartGid'] = purchasebot.get_shopping_cart_gid()
+            continue
 
-            results.append(result)
+        if not CHECKOUT_LINK in req.text:
+            bot.log.info(
+                u'Subid {0} caused cart not to be gifteable'.format(
+                    item.get('subid')
+                )
+            )
 
-            if (current_cart_count + 1) >= bot_obj.max_cart_until_purchase:
+            carts = crawler_items.SteamCart.all_from(req.text)
+
+            if not len(carts):
                 response.update({
                     'items': results,
-                    'result': enums.EBotResult.ReachedMaxCartCount
+                    'result':
+                    enums.ECartResult.UnableToRetrieveCartFromCrawler
                 })
 
                 controller.BotController().set_bot_state(
@@ -262,31 +263,62 @@ def cart_add():
 
                 return response
 
-    if (
-        purchasebot.get_shopping_cart_gid() != last_shopping_cart_gid
-        and last_shopping_cart_gid is not None
-    ):
-        bot.log.info(
-            u'shoppingCartGid {0} appears to have been reset'.format(
-                last_shopping_cart_gid
+            try:
+                cart_item_gid_matches = re.findall(
+                    r'([0-9]+)',
+                    carts[0].items[0].remove_button,
+                    re.DOTALL
+                )
+            except IndexError:
+                bot.log.error(
+                    u'IndexError on cart gid matches: {0}'.format(
+                        purchasebot.get_shopping_cart_gid()
+                    )
+                )
+
+                continue
+
+            if not len(cart_item_gid_matches):
+                response.update({
+                    'items': results,
+                    'result': enums.ECartResult.UnableToRetrieveCartItemGid
+                })
+
+                controller.BotController().set_bot_state(
+                    bot_obj.id,
+                    enums.EBotState.StandingBy.value
+                )
+
+                return response
+
+            cartitem_gid = cart_item_gid_matches[0]
+
+            purchasebot.remove_gid_from_cart(cartitem_gid)
+
+            continue
+
+        purchasebot.sync_data(bot_obj.id, req=req)
+        controller.BotController().set_last_cart_push(bot_obj.id)
+
+        result = dict(item)
+        result['shoppingCartGid'] = purchasebot.get_shopping_cart_gid()
+
+        results.append(result)
+
+        if (current_cart_count + 1) >= bot_obj.max_cart_until_purchase:
+            response.update({
+                'items': results,
+                'result': enums.EBotResult.ReachedMaxCartCount
+            })
+
+            controller.BotController().set_bot_state(
+                bot_obj.id,
+                enums.EBotState.StandingBy.value
             )
-        )
 
-        bot.log.info(
-            u'Removing all items with shoppingCartGid {0}'.format(
-                last_shopping_cart_gid
-            )
-        )
+            return response
 
-        results = filter(
-            lambda x: x['shoppingCartGid'] != last_shopping_cart_gid,
-            results
-        )
-
-        if not 'failed_gids' in response.keys():
-            response['failed_gids'] = []
-
-        response['failed_gids'].append(last_shopping_cart_gid)
+        current_cart_count += 1
 
     # This is intentionally old data
 

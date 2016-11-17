@@ -1,0 +1,67 @@
+<html>
+	<head>
+		<title>BOT Report</title>
+
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+		<!-- Optional theme -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+		<style type="text/css">
+			.table-listing{
+			    padding-left: 50px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="main">
+			<div class="container">
+				<div class="bots">
+					{% for bot in bots %}
+						<div class="bot">
+							<div class="bot_img" style="margin-top: 10px;">
+								<h4>{{ bot['name'] }}</h4>
+								<img src="{{ bot['avatar_url'] }}" style="width: 75px; height: 75px;">
+							</div>
+
+							<table cellspacing="0" cellpadding="0" class="table table-bordered" style="margin-top: 20px; font-size: 15px;">
+								<tbody>
+									{% for key in bot.keys() %}
+										<tr>
+											<td><strong>{{ key.replace('_', ' ') }}</strong></td>
+
+											<td class="table-listing">
+												{% if key == 'current_state' %}
+													{% if bot[key] == 1 %}
+														Standing By
+													{% elif bot[key] == 2 %}
+														Pushing Items to Cart
+													{% elif bot[key] == 3 %}
+														Purchasing Cart
+													{% elif bot[key] == 4 %}
+														Waiting for Sufficient Funds
+													{% elif bot[key] == 5 %}
+														Blocked for Too many Purchases
+													{% elif bot[key] == 6 %}
+														Blocked for unknown reason
+													{% endif %}
+												{% else %}
+													{{ bot[key] }}
+												{% endif %}
+											</td>
+										</tr>
+									{% endfor %}
+								</tbody>
+							</table>
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
