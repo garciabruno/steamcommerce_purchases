@@ -27,25 +27,27 @@ class Commander(object):
 
         subids = []
 
-        for relation in userrequests.get('userrequest_relations'):
-            if (
-                relation.get('product').get('store_sub_id') or
-                relation.get('product').get('sub_id')
-            ):
-                subids.append(
+        for userrequest_data in userrequests:
+            for relation in userrequest_data.get('userrequest_relations'):
+                if (
                     relation.get('product').get('store_sub_id') or
                     relation.get('product').get('sub_id')
-                )
+                ):
+                    subids.append(
+                        relation.get('product').get('store_sub_id') or
+                        relation.get('product').get('sub_id')
+                    )
 
-        for relation in paidrequests.get('paidrequest_relations'):
-            if (
-                relation.get('product').get('store_sub_id') or
-                relation.get('product').get('sub_id')
-            ):
-                subids.append(
+        for paidrequest_data in paidrequests:
+            for relation in paidrequest_data.get('paidrequest_relations'):
+                if (
                     relation.get('product').get('store_sub_id') or
                     relation.get('product').get('sub_id')
-                )
+                ):
+                    subids.append(
+                        relation.get('product').get('store_sub_id') or
+                        relation.get('product').get('sub_id')
+                    )
 
         return subids
 
