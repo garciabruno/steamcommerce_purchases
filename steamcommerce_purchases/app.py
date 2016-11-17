@@ -203,15 +203,10 @@ def cart_add():
                 u'Checking if shoppingCartGid still exists'
             )
 
-            check_req = purchasebot.session.get(
-                'https://store.steampowered.com'
-            )
+            purchasebot.session.get('https://store.steampowered.com/cart')
 
-            if (
-                'Set-Cookie' in check_req.headers.keys() and
-                'shoppingCartGID=deleted' in check_req.headers['Set-Cookie']
-            ):
-                bot.log.info(u'Cart has been deleted')
+            if purchasebot.session.cookies.get('shoppingCartGID') is None:
+                bot.log.info(u'shoppingCartGid cookie has been deleted')
 
                 bot.log.info(
                     u'Removing all items with shoppingCartGid {0}'.format(
@@ -229,10 +224,10 @@ def cart_add():
 
                 response['failed_gids'].append(last_shopping_cart_gid)
 
-                if not 'failed_subs' in response.keys():
-                    response['failed_subs'] = []
+                if not 'failed_items' in response.keys():
+                    response['failed_items'] = []
 
-                response['failed_subs'].append(item.get('subid'))
+                response['failed_items'].append(dict(item))
 
                 current_cart_count = 0
 
