@@ -66,126 +66,112 @@ class Commander(object):
         return subids
 
     def get_pending_userrequest_relations(self):
-        relations = self.userrequest_relation.select().join(
-            models.UserRequest
-        ).where(
-            models.UserRequest.paid == True,
-            models.UserRequest.visible == True,
-            models.UserRequest.accepted == False,
-            (models.UserRequest.assigned == None) |
-            (models.UserRequest.assigned == self.ADMIN_ID),
-            self.userrequest_relation.commitment_level ==
-            enums.ECommitLevel.Uncommited.value
-        )
-
+        userrequests = userrequest.UserRequest().get_paid()
         commited_store_subids = self.get_commited_store_subids()
 
-        log.info(
-            u'Found {0} pending userrequest relations'.format(
-                relations.count()
-            )
+        userrequests = filter(
+            lambda x: (
+                x['assigned'] is None or
+                x['assigned'].get('id') == self.ADMIN_ID
+            ),
+            userrequests
         )
 
         results = {}
 
-        for relation in relations:
-            currency = relation.product.price_currency
+        for userrequest_data in userrequests:
+            for relation in userrequest_data.get('userrequest_relations'):
+                product = relation.get('product')
+                currency = product.get('price_currency')
 
-            if not currency:
-                continue
+                if not currency:
+                    continue
 
-            if not currency in results.keys():
-                results[currency] = []
+                if not currency in results.keys():
+                    results[currency] = []
 
-            if (
-                not relation.product.store_sub_id and
-                not relation.product.sub_id
-            ):
-                log.error(
-                    u'Product id {0} did not contain sub id'.format(
-                        relation.product.id
+                if (
+                    not product.get('store_sub_id') and
+                    not product.get('sub_id')
+                ):
+                    log.error(
+                        u'Product id {0} did not contain sub id'.format(
+                            product.get('id')
+                        )
                     )
-                )
 
-                # TODO: Call task for relation.product.id ?
+                    # TODO: Call task for relation.product.id ?
 
-                continue
+                    continue
 
-            if (
-                relation.product.store_sub_id in commited_store_subids or
-                relation.product.sub_id in commited_store_subids
-            ):
-                continue
+                if (
+                    product.get('store_sub_id') in commited_store_subids or
+                    product.get('sub_id') in commited_store_subids
+                ):
+                    continue
 
-            results[currency].append({
-                'relation_type': 1,
-                'relation_id': relation.id,
-                'subid': int(
-                    relation.product.store_sub_id or relation.product.sub_id
-                ),
-            })
+                results[currency].append({
+                    'relation_type': 1,
+                    'relation_id': relation.get('id'),
+                    'subid': int(
+                        product.get('store_sub_id') or product.get('sub_id')
+                    ),
+                })
 
         return results
 
     def get_pending_paidrequest_relations(self):
-        relations = self.paidrequest_relation.select().join(
-            models.PaidRequest
-        ).where(
-            models.PaidRequest.authed == True,
-            models.PaidRequest.visible == True,
-            models.PaidRequest.accepted == False,
-            (models.PaidRequest.assigned == None) |
-            (models.PaidRequest.assigned == self.ADMIN_ID),
-            self.paidrequest_relation.commitment_level ==
-            enums.ECommitLevel.Uncommited.value
-        )
-
+        paidrequests = paidrequest.PaidRequest().get_paid()
         commited_store_subids = self.get_commited_store_subids()
 
-        log.info(
-            u'Found {0} pending paidrequest relations'.format(
-                relations.count()
-            )
+        paidrequests = filter(
+            lambda x: (
+                x['assigned'] is None or
+                x['assigned'].get('id') == self.ADMIN_ID
+            ),
+            paidrequests
         )
 
         results = {}
 
-        for relation in relations:
-            currency = relation.product.price_currency
+        for paidrequest_data in paidrequests:
+            for relation in paidrequest_data.get('paidrequest_relations'):
+                product = relation.get('product')
+                currency = product.get('price_currency')
 
-            if not currency:
-                continue
+                if not currency:
+                    continue
 
-            if not currency in results.keys():
-                results[currency] = []
+                if not currency in results.keys():
+                    results[currency] = []
 
-            if (
-                not relation.product.store_sub_id and
-                not relation.product.sub_id
-            ):
-                log.error(
-                    u'Product id {0} did not contain sub id'.format(
-                        relation.product.id
+                if (
+                    not product.get('store_sub_id') and
+                    not product.get('sub_id')
+                ):
+                    log.error(
+                        u'Product id {0} did not contain sub id'.format(
+                            product.get('id')
+                        )
                     )
-                )
 
-                # TODO: Call task for relation.product.id ?
+                    # TODO: Call task for relation.product.id ?
 
-                continue
+                    continue
 
-            if (
-                relation.product.store_sub_id in commited_store_subids or
-                relation.product.sub_id in commited_store_subids
-            ):
-                continue
+                if (
+                    product.get('store_sub_id') in commited_store_subids or
+                    product.get('sub_id') in commited_store_subids
+                ):
+                    continue
 
-            results[currency].append({
-                'relation_type': 2,
-                'relation_id': relation.id,
-                'subid': int(
-                    relation.product.store_sub_id or relation.product.sub_id
-                ),
-            })
+                results[currency].append({
+                    'relation_type': 2,
+                    'relation_id': relation.get('id'),
+                    'subid': int(
+                        product.get('store_sub_id') or product.get('sub_id')
+                    ),
+                })
 
         return results
 
