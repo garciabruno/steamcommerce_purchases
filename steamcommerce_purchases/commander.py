@@ -22,30 +22,29 @@ class Commander(object):
         self.ADMIN_ID = config.ADMIN_ID
 
     def get_commited_store_subids(self):
-        userrequest_relations = self.userrequest_relation.select().where(
-            self.userrequest_relation.commitment_level ==
-            enums.ECommitLevel.AddedToCart.value
-        )
-
-        paidrequest_relations = self.paidrequest_relation.select().where(
-            self.paidrequest_relation.commitment_level ==
-            enums.ECommitLevel.AddedToCart.value
-        )
+        userrequests = userrequest.UserRequest().get_paid()
+        paidrequests = paidrequest.PaidRequest().get_paid()
 
         subids = []
 
-        for relation in userrequest_relations:
-            if relation.product.store_sub_id or relation.product.sub_id:
+        for relation in userrequests.get('userrequest_relations'):
+            if (
+                relation.get('product').get('store_sub_id') or
+                relation.get('product').get('sub_id')
+            ):
                 subids.append(
-                    relation.product.store_sub_id or
-                    relation.product.sub_id
+                    relation.get('product').get('store_sub_id') or
+                    relation.get('product').get('sub_id')
                 )
 
-        for relation in paidrequest_relations:
-            if relation.product.store_sub_id or relation.product.sub_id:
+        for relation in paidrequests.get('paidrequest_relations'):
+            if (
+                relation.get('product').get('store_sub_id') or
+                relation.get('product').get('sub_id')
+            ):
                 subids.append(
-                    relation.product.store_sub_id or
-                    relation.product.sub_id
+                    relation.get('product').get('store_sub_id') or
+                    relation.get('product').get('sub_id')
                 )
 
         return subids
