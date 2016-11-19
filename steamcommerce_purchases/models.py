@@ -41,3 +41,4 @@ class Bot(BaseModel):
     max_timespan_until_purchase = peewee.IntegerField(default=120)
     data_filename = peewee.CharField(null=True)
     session_filename = peewee.CharField(null=True)
+    last_shopping_cart_purchase = peewee.CharField(null=True)
