@@ -330,17 +330,19 @@ class Commander(object):
 
         return results
 
-    def commit_purchased_items(self, shopping_cart_gid):
+    def commit_purchased_relations(self, shopping_cart_gid, bot_id):
         self.userrequest_relation.update(
             commitment_level=enums.ECommitLevel.Purchased.value
         ).where(
-            self.userrequest_relation.shopping_cart_gid == shopping_cart_gid
+            self.userrequest_relation.shopping_cart_gid == shopping_cart_gid,
+            self.userrequest_relation.commited_on_bot == bot_id
         ).execute()
 
         self.paidrequest_relation.update(
             commitment_level=enums.ECommitLevel.Purchased.value
         ).where(
-            self.paidrequest_relation.shopping_cart_gid == shopping_cart_gid
+            self.paidrequest_relation.shopping_cart_gid == shopping_cart_gid,
+            self.paidrequest_relation.commited_on_bot == bot_id
         ).execute()
 
         userrequest.UserRequest().flush_relations()

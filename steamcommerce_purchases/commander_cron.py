@@ -143,7 +143,8 @@ for currency in relations.keys():
 
             continue
 
-        reply = enums.EPurchaseResult(int(req.text))
+        purchase_response = json.loads(req.text)
+        reply = enums.EPurchaseResult(purchase_response[0])
 
         log.info(
             u'Received {0} from {1} ({2})'.format(
@@ -152,3 +153,17 @@ for currency in relations.keys():
                 currency
             )
         )
+
+        if reply == enums.EPurchaseResult.Succeded:
+            log.info(
+                u'Commiting all relations with shopping cart\
+ gid {0} on bot {1}'.format(
+                purchase_response[1],
+                purchase_response[2]
+                )
+            )
+
+            commander.Comander().commit_purchased_relations(
+                purchase_response[1],
+                purchase_response[2]
+            )
