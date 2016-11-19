@@ -407,20 +407,20 @@ def bot_cart_checkout():
     giftee_account_id = request.form.get('giftee_account_id')
 
     if not bot_id:
-        return enums.EBotResult.NotBotAvailableFound
+        return (enums.EBotResult.NotBotAvailableFound,)
 
     if not giftee_account_id or not country_code:
-        return enums.EBotResult.RaisedUnknownException
+        return (enums.EBotResult.RaisedUnknownException,)
 
     bot_obj = controller.BotController().get_bot_id(int(bot_id))
 
     if not isinstance(bot_obj, controller.BotController().model):
-        return bot_obj
+        return (bot_obj,)
 
     purchasebot = bot.get_purchasebot(bot_obj)
 
     if not isinstance(purchasebot, bot.PurchaseBot):
-        return purchasebot
+        return (purchasebot,)
 
     controller.BotController().set_bot_state(
         bot_obj.id,
@@ -459,7 +459,7 @@ def bot_cart_checkout():
             enums.EBotState.BlockedForUnknownReason.value
         )
 
-    return purchase_result
+    return (purchase_result, shopping_cart_gid, bot_id.id)
 
 
 @app.route('/bot/set/state/<int:bot_id>/<int:state>')
