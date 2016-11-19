@@ -286,43 +286,83 @@ class Commander(object):
                     config.ADMIN_ID
                 )
 
-        if not 'failed_gids' in results.keys():
-            return results
-
-        log.info(
-            u'Received a list of previously commited shoppingCartGids'
-        )
-
-        for failed_gid in results['failed_gids']:
+        if 'failed_gids' in results.keys():
             log.info(
-                u'Rolling back relations with shoppingCartGid {0}'.format(
-                    failed_gid
-                )
+                u'Received a list of previously commited shoppingCartGids'
             )
 
-            self.userrequest_relation.update(
-                commited_on_bot=None,
-                shopping_cart_gid=None,
-                commitment_level=enums.ECommitLevel.Uncommited.value,
-            ).where(
-                self.userrequest_relation.shopping_cart_gid == failed_gid,
-                self.userrequest_relation.commitment_level ==
-                enums.ECommitLevel.AddedToCart.value,
-                self.userrequest_relation.sent == False
-            ).execute()
+            for failed_gid in results['failed_gids']:
+                log.info(
+                    u'Rolling back relations with shoppingCartGid {0}'.format(
+                        failed_gid
+                    )
+                )
 
-            self.paidrequest_relation.update(
-                commited_on_bot=None,
-                shopping_cart_gid=None,
-                commitment_level=enums.ECommitLevel.Uncommited.value
-            ).where(
-                self.paidrequest_relation.shopping_cart_gid == failed_gid,
-                self.paidrequest_relation.commitment_level ==
-                enums.ECommitLevel.AddedToCart.value,
-                self.paidrequest_relation.sent == False
-            ).execute()
+                self.userrequest_relation.update(
+                    commited_on_bot=None,
+                    shopping_cart_gid=None,
+                    commitment_level=enums.ECommitLevel.Uncommited.value,
+                ).where(
+                    self.userrequest_relation.shopping_cart_gid == failed_gid,
+                    self.userrequest_relation.commitment_level ==
+                    enums.ECommitLevel.AddedToCart.value,
+                    self.userrequest_relation.sent == False
+                ).execute()
 
-            userrequest.UserRequest().flush_relations()
-            paidrequest.PaidRequest().flush_relations()
+                self.paidrequest_relation.update(
+                    commited_on_bot=None,
+                    shopping_cart_gid=None,
+                    commitment_level=enums.ECommitLevel.Uncommited.value
+                ).where(
+                    self.paidrequest_relation.shopping_cart_gid == failed_gid,
+                    self.paidrequest_relation.commitment_level ==
+                    enums.ECommitLevel.AddedToCart.value,
+                    self.paidrequest_relation.sent == False
+                ).execute()
+
+                userrequest.UserRequest().flush_relations()
+                paidrequest.PaidRequest().flush_relations()
+
+        if 'failed_items' in results.keys():
+            log.info(u'Received a list of sent items that fail to get added')
+
+            self.commit_failed_items(results.get('failed_items'))
 
         return results
+
+    def commit_purchased_items(self, shopping_cart_gid):
+        self.userrequest_relation.update(
+            commitment_level=enums.ECommitLevel.Purchased.value
+        ).where(
+            self.userrequest_relation.shopping_cart_gid == shopping_cart_gid
+        ).execute()
+
+        self.paidrequest_relation.update(
+            commitment_level=enums.ECommitLevel.Purchased.value
+        ).where(
+            self.paidrequest_relation.shopping_cart_gid == shopping_cart_gid
+        ).execute()
+
+        userrequest.UserRequest().flush_relations()
+        paidrequest.PaidRequest().flush_relations()
+
+    def commit_failed_items(self, items):
+        for item in items:
+            if item.get('relation_type') == 1:
+                self.userrequest_relation.update(
+                    commitment_level=enums.ECommitLevel.FailedToAddToCart.value
+                ).where(
+                    self.userrequest_relation.id == item.get('relation_id')
+                ).execute()
+
+            elif item.get('relation_type') == 2:
+                self.paidrequest_relation.update(
+                    commitment_level=enums.ECommitLevel.FailedToAddToCart.value
+                ).where(
+                    self.paidrequest_relation.id == item.get('relation_id')
+                ).execute()
+
+        # Possible TODO: Make sure to call a price update on item['subid']
+
+        userrequest.UserRequest().flush_relations()
+        paidrequest.PaidRequest().flush_relations()
