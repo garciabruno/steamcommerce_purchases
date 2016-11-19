@@ -8,6 +8,7 @@ import datetime
 
 from flask import Flask
 from flask import request
+from flask import redirect
 from flask import render_template
 
 from functools import wraps
@@ -52,6 +53,11 @@ def as_json(f):
 def bots_report():
     bots = controller.BotController().get_bots()
     bots_data = [x._data for x in bots]
+
+    if request.values.get('json'):
+        return json_util.dumps(bots_data), 200, {
+            'Content-Type': 'application/json'
+        }
 
     return render_template('bots.html', bots=bots_data)
 
@@ -231,7 +237,7 @@ def cart_add():
 
                 current_cart_count = 0
 
-            purchasebot.sync_data(bot_obj.id, req=req)
+            purchasebot.sync_data(bot_obj.id)
 
             continue
 
@@ -421,6 +427,8 @@ def bot_cart_checkout():
         enums.EBotState.PurchasingCart.value
     )
 
+    shopping_cart_gid = purchasebot.get_shopping_cart_gid()
+
     purchase_result = purchasebot.cart_checkout(
         giftee_account_id,
         country_code
@@ -434,12 +442,17 @@ def bot_cart_checkout():
     elif purchase_result == enums.EPurchaseResult.Succeded:
         purchasebot.sync_data(bot_obj.id)
 
-        controller.BotController().set_last_cart_purchase(bot_obj.id)
+        controller.BotController().set_last_cart_purchase(
+            bot_obj.id,
+            shopping_cart_gid
+        )
 
         controller.BotController().set_bot_state(
             bot_obj.id,
             enums.EBotState.StandingBy.value
         )
+
+        purchasebot.sync_data(bot_obj.id)
     else:
         controller.BotController().set_bot_state(
             bot_obj.id,
@@ -447,3 +460,13 @@ def bot_cart_checkout():
         )
 
     return purchase_result
+
+
+@app.route('/bot/set/state/<int:bot_id>/<int:state>')
+def set_bot_state(bot_id, state):
+    controller.BotController().set_bot_state(
+        bot_id,
+        enums.EBotState(state).value
+    )
+
+    return redirect('/bots/report/')
