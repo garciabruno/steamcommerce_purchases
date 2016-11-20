@@ -74,17 +74,17 @@ class BotController(object):
             'last_cart_push': datetime.datetime.now()
         })
 
-    def set_last_cart_purchase(self, bot_id):
+    def set_last_cart_purchase(self, bot_id, shopping_cart_gid):
         return self.update(**{
             'id': bot_id,
-            'last_cart_purchase': datetime.datetime.now()
+            'last_cart_purchase': datetime.datetime.now(),
+            'last_shopping_cart_purchase': shopping_cart_gid
         })
 
-    def set_last_failed_cart_purchase(self, bot_id, shopping_cart_gid):
+    def set_last_failed_cart_purchase(self, bot_id):
         return self.update(**{
             'id': bot_id,
-            'last_failed_purchase': datetime.datetime.now(),
-            'last_shopping_cart_purchase': shopping_cart_gid
+            'last_failed_purchase': datetime.datetime.now()
         })
 
     def set_bot_state(self, bot_id, state):
