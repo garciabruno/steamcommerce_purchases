@@ -34,11 +34,12 @@ class Commander(object):
                     relation.get('product').get('sub_id')
                 )
 
+                commitment_level = relation.get('commitment_level')
+
                 if (
-                    has_sub_id and
-                    relation.get('commitment_level') ==
-                    enums.ECommitLevel.AddedToCart and not
-                    relation.get('sent')
+                    has_sub_id and not
+                    relation.get('sent') and
+                    commitment_level != enums.ECommitLevel.Uncommited
                 ):
                     subids.append(
                         relation.get('product').get('store_sub_id') or
@@ -52,11 +53,12 @@ class Commander(object):
                     relation.get('product').get('sub_id')
                 )
 
+                commitment_level = relation.get('commitment_level')
+
                 if (
-                    has_sub_id and
-                    relation.get('commitment_level') ==
-                    enums.ECommitLevel.AddedToCart and not
-                    relation.get('sent')
+                    has_sub_id and not
+                    relation.get('sent') and
+                    commitment_level != enums.ECommitLevel.Uncommited
                 ):
                     subids.append(
                         relation.get('product').get('store_sub_id') or
