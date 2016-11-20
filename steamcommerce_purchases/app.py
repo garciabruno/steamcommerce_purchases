@@ -459,7 +459,7 @@ def bot_cart_checkout():
             enums.EBotState.BlockedForUnknownReason.value
         )
 
-    return (purchase_result, shopping_cart_gid, bot_id.id)
+    return (purchase_result, shopping_cart_gid, bot_obj.id)
 
 
 @app.route('/bot/set/state/<int:bot_id>/<int:state>')
