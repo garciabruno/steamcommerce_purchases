@@ -163,7 +163,7 @@ for currency in relations.keys():
                 )
             )
 
-            commander.Comander().commit_purchased_relations(
+            commander.Commander().commit_purchased_relations(
                 purchase_response[1],
                 purchase_response[2]
             )
