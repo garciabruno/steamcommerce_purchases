@@ -9,3 +9,5 @@ steamcommerce_purchases/debug/*
 *.log
 *.pickle
 *.ipynb
+*.log
+*.out
