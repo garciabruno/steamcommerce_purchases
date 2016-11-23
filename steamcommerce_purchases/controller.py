@@ -71,13 +71,13 @@ class BotController(object):
     def set_last_cart_push(self, bot_id):
         return self.update(**{
             'id': bot_id,
-            'last_cart_push': datetime.datetime.now()
+            'last_cart_push': datetime.datetime.utcnow()
         })
 
     def set_last_cart_purchase(self, bot_id, shopping_cart_gid):
         return self.update(**{
             'id': bot_id,
-            'last_cart_purchase': datetime.datetime.now(),
+            'last_cart_purchase': datetime.datetime.utcnow(),
             'last_shopping_cart_purchase': shopping_cart_gid
         })
 

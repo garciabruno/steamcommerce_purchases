@@ -227,7 +227,7 @@ class Cron(object):
                     '%Y-%m-%d %H:%M:%S.%f'
                 )
 
-                time_diff = (datetime.datetime.now() - last_cart_push)
+                time_diff = (datetime.datetime.utcnow() - last_cart_push)
                 timespan = bot_data.get('max_timespan_until_purchase')
 
                 current_cart_count = bot_data.get('current_cart_count')
