@@ -3,6 +3,7 @@
 
 import os
 import re
+import time
 import json
 import pickle
 import urllib
@@ -515,16 +516,12 @@ class PurchaseBot(object):
                 return transaction_status
 
             attemps -= 1
+            time.sleep(0.5)
 
         if transaction_status == 22 and attemps <= 0:
             return enums.EPurchaseResult.ReachedMaximumPollAttemps
 
-        self.session.cookies.set(
-            'shoppingCartGID',
-            None,
-            domain='store.steampowered.com'
-        )
-
+        self.session.cookies.set('shoppingCartGID', None)
         self.save_session_to_file()
 
         return enums.EPurchaseResult.Succeded
