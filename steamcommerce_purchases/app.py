@@ -435,6 +435,8 @@ def bot_cart_checkout():
     )
 
     if purchase_result == enums.EPurchaseResult.InsufficientFunds:
+        controller.BotController().set_last_failed_cart_purchase(bot_obj.id)
+
         controller.BotController().set_bot_state(
             bot_obj.id,
             enums.EBotState.WaitingForSufficientFunds.value
@@ -454,6 +456,8 @@ def bot_cart_checkout():
 
         purchasebot.sync_data(bot_obj.id)
     else:
+        controller.BotController().set_last_failed_cart_purchase(bot_obj.id)
+
         controller.BotController().set_bot_state(
             bot_obj.id,
             enums.EBotState.BlockedForUnknownReason.value
