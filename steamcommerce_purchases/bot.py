@@ -250,7 +250,7 @@ class PurchaseBot(object):
         if not self.get_shopping_cart_gid():
             log.error(u'Tried to init transaction without shoppingCartGID')
 
-            return enums.ECartResult.DidNotFindShoppingCartGid
+            return enums.EPurchaseResult.DidNotFindShoppingCartGid
 
         log.info(
             u'Posting init transaction with shoppingCartGID {0}'.format(

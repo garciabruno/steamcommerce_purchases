@@ -41,7 +41,6 @@ class EBotResult(EBotEnum):
 class ECartResult(EBotEnum):
     UnableToRetrieveCartFromCrawler = 12
     UnableToRetrieveCartItemGid = 13
-    DidNotFindShoppingCartGid = 14
 
 
 class EPurchaseResult(EBotEnum):
@@ -66,6 +65,7 @@ class EPurchaseResult(EBotEnum):
 
     RaisedUnknownException = 26
     ReachedMaximumPollAttemps = 27
+    DidNotFindShoppingCartGid = 28
 
 
 class ECommitLevel(EBotEnum):
