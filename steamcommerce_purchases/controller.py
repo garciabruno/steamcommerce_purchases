@@ -84,7 +84,7 @@ class BotController(object):
     def set_last_failed_cart_purchase(self, bot_id):
         return self.update(**{
             'id': bot_id,
-            'last_failed_purchase': datetime.datetime.now()
+            'last_failed_purchase': datetime.datetime.utcnow()
         })
 
     def set_bot_state(self, bot_id, state):
