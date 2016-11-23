@@ -114,6 +114,16 @@ class Commander(object):
                 ):
                     continue
 
+                commitment_level = relation.get('commitment_level')
+
+                if commitment_level != enums.ECommitLevel.Uncommited:
+                    log.error(
+                        u'This relation is already commited'
+                        ' and should not be sent to the bots'
+                    )
+
+                    continue
+
                 results[currency].append({
                     'relation_type': 1,
                     'relation_id': relation.get('id'),
@@ -167,6 +177,16 @@ class Commander(object):
                     product.get('store_sub_id') in commited_store_subids or
                     product.get('sub_id') in commited_store_subids
                 ):
+                    continue
+
+                commitment_level = relation.get('commitment_level')
+
+                if commitment_level != enums.ECommitLevel.Uncommited:
+                    log.error(
+                        u'This relation is already commited'
+                        ' and should not be sent to the bots'
+                    )
+
                     continue
 
                 results[currency].append({
