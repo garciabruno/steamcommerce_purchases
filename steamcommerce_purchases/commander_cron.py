@@ -233,7 +233,10 @@ class Cron(object):
                 current_cart_count = bot_data.get('current_cart_count')
                 max_cart_count = bot_data.get('max_cart_until_purchase')
 
-                reached_max_timespan = time_diff.total_seconds() > timespan
+                reached_max_timespan = (
+                    time_diff.total_seconds() / 60 > timespan
+                )
+
                 reached_max_cart_count = current_cart_count > max_cart_count
 
                 if (reached_max_timespan or reached_max_cart_count):
