@@ -237,14 +237,15 @@ class Cron(object):
                 reached_max_cart_count = current_cart_count > max_cart_count
 
                 if (reached_max_timespan or reached_max_cart_count):
-                    log.info(
-                        u'Reached {0}, calling bot to checkout cart'.format(
-                            'Max timespan' if reached_max_timespan else
-                            'Max cart count'
+                    if (current_cart_count > 0):
+                        log.info(
+                            u'Reached {}, calling bot to checkout cart'.format(
+                                'Max timespan' if reached_max_timespan else
+                                'Max cart count'
+                            )
                         )
-                    )
 
-                    self.call_bot_checkout(currency, bot_data.get('id'))
+                        self.call_bot_checkout(currency, bot_data.get('id'))
 
 if __name__ == '__main__':
     log.info(u'Starting Commander Cron')
