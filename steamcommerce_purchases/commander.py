@@ -59,7 +59,8 @@ class Commander(object):
                 if (
                     has_sub_id and not
                     relation.get('sent') and
-                    commitment_level != enums.ECommitLevel.Uncommited
+                    (commitment_level == enums.ECommitLevel.AddedToCart or
+                     commitment_level == enums.ECommitLevel.FailedToAddToCart)
                 ):
                     subids.append(
                         relation.get('product').get('store_sub_id') or
