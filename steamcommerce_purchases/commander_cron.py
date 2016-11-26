@@ -49,7 +49,7 @@ class Cron(object):
                 req = requests.post(
                     BOTS[currency] + '/bot/cart/add/',
                     data={'items': json.dumps(relations[currency])},
-                    timeout=300
+                    timeout=1800
                 )
             except Exception, e:
                 log.error(
@@ -141,7 +141,7 @@ class Cron(object):
                 'country_code': currency,
                 'giftee_account_id': ACCOUNT_IDS[currency]
             },
-            timeout=300
+            timeout=1800
         )
 
         if req.status_code != 200:
