@@ -21,8 +21,12 @@ class Commander(object):
 
         self.ADMIN_ID = config.ADMIN_ID
 
-    def get_commited_store_subids(self):
-        userrequests = userrequest.UserRequest().get_paid()
+    def get_commited_store_subids(self, informed=False):
+        if informed:
+            userrequests = userrequest.UserRequest().get_informed()
+        else:
+            userrequests = userrequest.UserRequest().get_paid()
+
         paidrequests = paidrequest.PaidRequest().get_paid()
 
         subids = []
@@ -69,9 +73,15 @@ class Commander(object):
 
         return subids
 
-    def get_pending_userrequest_relations(self):
-        userrequests = userrequest.UserRequest().get_paid()
-        commited_store_subids = self.get_commited_store_subids()
+    def get_pending_userrequest_relations(self, informed=False):
+        if informed:
+            userrequests = userrequest.UserRequest().get_informed()
+        else:
+            userrequests = userrequest.UserRequest().get_paid()
+
+        commited_store_subids = self.get_commited_store_subids(
+            informed=informed
+        )
 
         userrequests = filter(
             lambda x: (
@@ -194,10 +204,13 @@ class Commander(object):
 
         return results
 
-    def get_pending_relations(self):
+    def get_pending_relations(self, informed=False):
         log.info(u'Getting pending relations for bots')
 
-        userrequest_results = self.get_pending_userrequest_relations()
+        userrequest_results = self.get_pending_userrequest_relations(
+            informed=informed
+        )
+
         paidrequest_results = self.get_pending_paidrequest_relations()
 
         results = {}

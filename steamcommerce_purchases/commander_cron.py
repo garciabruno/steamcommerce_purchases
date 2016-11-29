@@ -19,7 +19,9 @@ ACCOUNT_IDS = config.ACCOUNT_IDS
 
 class Cron(object):
     def push_relations(self):
-        relations = commander.Commander().get_pending_relations()
+        relations = commander.Commander().get_pending_relations(
+            informed=config.USE_INFORMED_USERREQUESTS
+        )
 
         for currency in relations.keys():
             if not currency in config.BOTS.keys():
