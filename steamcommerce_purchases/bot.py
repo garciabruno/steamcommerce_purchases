@@ -16,6 +16,7 @@ import logger
 from totp import SteamTOTP
 
 import enums
+import config
 import controller
 
 
@@ -493,6 +494,8 @@ class PurchaseBot(object):
         if isinstance(transid, enums.EPurchaseResult):
             return transid
 
+        # TODO: if transid == "-1" => Block BOT for TooManyPurchases
+
         transaction_price = self.get_finalprice(transid)
 
         if isinstance(transaction_price, enums.EPurchaseResult):
@@ -822,6 +825,282 @@ class PurchaseBot(object):
         }
 
         return controller.BotController().update(**data)
+
+    def get_inventory_json(self, appid, contextid, count=5000):
+        try:
+            req = self.session.get(
+                'http://steamcommunity.com/inventory/{0}/{1}/{2}'.format(
+                    self.data.get('Session').get('SteamID'),
+                    appid,
+                    contextid
+                ),
+                params={
+                    'l': 'english',
+                    'count': count
+                }
+            )
+        except Exception, e:
+            log.error(u'Could not retrieve inventory json: {0}'.format(e))
+
+            return False
+
+        if req.status_code != 200:
+            log.error(
+                u'Inventory json returned status code {0}'.format(
+                    req.status_code
+                )
+            )
+
+            return False
+
+        try:
+            data = req.json()
+        except Exception, e:
+            log.error(u'Could not serialize inventory json: {0}'.format(e))
+
+            return False
+
+        log.info(
+            u'Found {0} items in inventory appid {1} contextid {2}'.format(
+                data.get('total_inventory_count'),
+                appid,
+                contextid
+            )
+        )
+
+        context_descriptions = {}
+
+        for description in data.get('descriptions'):
+            if not 'tags' in description.keys():
+                continue
+
+            descriptions_chain = [
+                x.get('internal_name') for x in description.get('tags')
+            ]
+
+            if 'CSGO_Tool_WeaponCase_KeyTag' in descriptions_chain:
+                context_description_key = '{0}_{1}'.format(
+                    description.get('classid'),
+                    description.get('instanceid')
+                )
+
+                context_descriptions[context_description_key] = dict(
+                    description
+                )
+
+        assets = {}
+
+        for asset in data.get('assets'):
+            context_description_key = '{0}_{1}'.format(
+                asset.get('classid'),
+                asset.get('instanceid')
+            )
+
+            if not context_description_key in context_descriptions.keys():
+                continue
+
+            if not context_description_key in assets:
+                assets[context_description_key] = []
+
+            assets[context_description_key].append(dict(asset))
+
+        return {'descriptions': context_descriptions, 'assets': assets}
+
+    def get_lowest_price(self, country, currency, appid, market_hash_name):
+        try:
+            req = self.session.get(
+                'http://steamcommunity.com/market/priceoverview/',
+                params={
+                    'country': country,
+                    'currency': currency,
+                    'appid': appid,
+                    'market_hash_name': market_hash_name
+                }
+            )
+        except Exception, e:
+            log.error(
+                u'Could not get market price overview for {0}: {1}'.format(
+                    market_hash_name,
+                    e
+                )
+            )
+
+            return False
+
+        if req.status_code != 200:
+            log.error(
+                u'Market price for {0} received status code {1}'.format(
+                    market_hash_name,
+                    req.status_code
+                )
+            )
+
+            return False
+
+        try:
+            data = req.json()
+        except Exception, e:
+            log.error(
+                u'Could not serialize market price data for {0}: {1}'.format(
+                    market_hash_name,
+                    e
+                )
+            )
+
+            return False
+
+        return data
+
+    def sell_item_to_market(self, appid, assetid, contextid, price, amount=1):
+        referer = 'http://steamcommunity.com/profiles/{}/inventory/'.format(
+            self.data.get('Session').get('SteamID')
+        )
+
+        try:
+            req = self.session.post(
+                'https://steamcommunity.com/market/sellitem/',
+                data={
+                    'amount': amount,
+                    'appid': appid,
+                    'assetid': assetid,
+                    'contextid': contextid,
+                    'price': price,
+                    'sessionid': self.session.cookies.get(
+                        'sessionid',
+                        domain='steamcommunity.com'
+                    )
+                },
+                headers={
+                    'Referer': referer
+                }
+            )
+        except Exception, e:
+            log.error(u'Could not sell item to market: {0}'.format(e))
+
+            return False
+
+        if req.status_code != 200:
+            log.error(
+                u'Sell item to market returned status code {0}'.format(
+                    req.status_code
+                )
+            )
+
+            return False
+
+        try:
+            data = req.json()
+        except Exception, e:
+            log.error(
+                u'Could not serialize sell item to market: {0}'.format(
+                    e
+                )
+            )
+
+        if not data.get('success'):
+            log.error(u'Sell item to market did not contain success')
+
+            return False
+
+        return data
+
+    def sell_items_to_market(self, market_hash_name, amount, delta=0.00):
+        log.info(u'Getting lowest price for {0}'.format(market_hash_name))
+
+        data = self.get_lowest_price(
+            config.ECurrencyCode,
+            config.ECountryCode,
+            config.EAppId,
+            market_hash_name
+        )
+
+        if not data:
+            return None
+
+        matches = re.findall(
+            config.ECurrencyRegex,
+            data.get('lowest_price'),
+            re.DOTALL
+        )
+
+        if not len(matches):
+            log.error(
+                u'Lowest price ReGeX failed for {0}'.format(
+                    data.get('lowest_price')
+                )
+            )
+
+            return None
+
+        lowest_price = round(float(matches[0]) + float(delta), 2)
+
+        log.info(
+            u'Selected lowest price: {0} for {1}'.format(
+                lowest_price,
+                market_hash_name
+            )
+        )
+
+        log.info(u'Retrieving inventory items')
+
+        inventory = self.get_inventory_json(config.EAppId, config.EContextId)
+
+        if not inventory:
+            return None
+
+        context_description_key = None
+
+        for ctx_descr_key in inventory.get('descriptions').keys():
+            item_name = inventory.get('descriptions')[ctx_descr_key].get(
+                'name'
+            )
+
+            if item_name == market_hash_name:
+                context_description_key = ctx_descr_key
+
+        if not context_description_key:
+            log.error(u'Contex description key was not found')
+
+            return None
+
+        if len(inventory.get('assets')[context_description_key]) < amount:
+            log.error(
+                u'Insufficient item amount for {0}'.format(
+                    market_hash_name
+                )
+            )
+
+            return None
+
+        i = 0
+
+        for asset in inventory.get('assets').get(context_description_key):
+            if i == amount:
+                break
+
+            market_fee = lowest_price / 100.0 * 15
+            price = int(round(lowest_price - market_fee, 2) * 100.0)
+
+            log.info(
+                u'Selling item {0} for {1} | {2}/{3}'.format(
+                    market_hash_name,
+                    price / 100.0,
+                    i + 1,
+                    amount
+                )
+            )
+
+            sell_data = self.sell_item_to_market(
+                config.EAppId,
+                asset.get('assetid'),
+                config.EContextId,
+                price
+            )
+
+            if not sell_data:
+                break
+
+            i += 1
 
 
 class RegisterBot(object):
