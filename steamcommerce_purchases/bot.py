@@ -1008,8 +1008,8 @@ class PurchaseBot(object):
         log.info(u'Getting lowest price for {0}'.format(market_hash_name))
 
         data = self.get_lowest_price(
-            config.ECurrencyCode,
             config.ECountryCode,
+            config.ECurrencyCode,
             config.EAppId,
             market_hash_name
         )
