@@ -870,7 +870,7 @@ class PurchaseBot(object):
 
         context_descriptions = {}
 
-        for description in data.get('descriptions'):
+        for description in data.get('descriptions', []):
             if not 'tags' in description.keys():
                 continue
 
@@ -890,7 +890,7 @@ class PurchaseBot(object):
 
         assets = {}
 
-        for asset in data.get('assets'):
+        for asset in data.get('assets', []):
             context_description_key = '{0}_{1}'.format(
                 asset.get('classid'),
                 asset.get('instanceid')
