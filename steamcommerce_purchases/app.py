@@ -407,17 +407,17 @@ def bot_inventory_info(bot_id):
     bot_obj = controller.BotController().get_bot_id(bot_id)
 
     if not isinstance(bot_obj, controller.BotController().model):
-        return bot_obj
+        return str(bot_obj)
 
     purchasebot = bot.get_purchasebot(bot_obj)
 
     if not isinstance(purchasebot, bot.PurchaseBot):
-        return purchasebot
+        return str(purchasebot)
 
     inventory = purchasebot.get_inventory_json(730, 2)
 
     if not inventory:
-        return inventory
+        return str(inventory)
 
     return render_template('inventory.html', inventory=inventory)
 
