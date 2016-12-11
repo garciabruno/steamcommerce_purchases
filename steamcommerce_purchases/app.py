@@ -399,6 +399,29 @@ def bot_cart_info(bot_id):
     return response
 
 
+@app.route('/bot/inventory/info/<int:bot_id>')
+def bot_inventory_info(bot_id):
+    if not bot_id:
+        return enums.EBotResult.NotBotAvailableFound
+
+    bot_obj = controller.BotController().get_bot_id(bot_id)
+
+    if not isinstance(bot_obj, controller.BotController().model):
+        return bot_obj
+
+    purchasebot = bot.get_purchasebot(bot_obj)
+
+    if not isinstance(purchasebot, bot.PurchaseBot):
+        return purchasebot
+
+    inventory = purchasebot.get_inventory_json(730, 2)
+
+    if not inventory:
+        return inventory
+
+    return render_template('inventory.html', inventory=inventory)
+
+
 @app.route('/bot/cart/checkout/', methods=['POST'])
 @as_json
 def bot_cart_checkout():

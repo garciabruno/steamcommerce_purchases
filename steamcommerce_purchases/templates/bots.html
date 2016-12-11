@@ -28,11 +28,15 @@
 							</div>
 
 							<div class="bot_buttons" style="margin-top: 10px;">
-								<a href="/bot/cart/info/{{ bot.get('id') }}" class="btn btn-primary">Cart info</a>
+								<h4>BOT Info</h4>
+
+								<a href="/bot/cart/info/{{ bot.get('id') }}" class="btn btn-default">Cart info</a>
+								<a href="/bot/inventory/info/{{ bot.get('id') }}" class="btn btn-default">Inventory info</a>
 							</div>
 
-
 							<div class="bot_buttons" style="margin-top: 10px;">
+								<h4>BOT State Control</h4>
+
 								<a href="/bot/set/state/{{ bot.get('id') }}/1" class="btn btn-default">Standing By</a>
 								<a href="/bot/set/state/{{ bot.get('id') }}/2" class="btn btn-default">Pushing Items to Cart</a>
 								<a href="/bot/set/state/{{ bot.get('id') }}/3" class="btn btn-default">Purchasing Cart</a>

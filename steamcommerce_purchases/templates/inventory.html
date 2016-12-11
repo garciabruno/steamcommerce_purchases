@@ -1,0 +1,42 @@
+<html>
+	<head>
+		<title>BOT Inventory</title>
+
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+		<style type="text/css">
+			.table-listing{
+			    padding-left: 50px;
+			}
+
+			.inventory_image{
+				margin-top: 10px;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<div class="main">
+			<div class="container">
+				<div class="inventory_items">
+					{% for context_description_key in inventory.get('assets').keys() %}
+						<div class="inventory_item">
+							<h2 class="item_amount">{{ inventory.get('assets')[context_description_key]|length }}</h2>
+
+							<div class="item_name">{{ inventory.get('descriptions')[context_description_key].get('name') }}</div>
+
+							<div class="item_image">
+								<img src="http://steamcommunity-a.akamaihd.net/economy/image/{{ inventory.get('descriptions')[context_description_key].get('icon_url') }}/360fx360f" style="width: 220px; height: 220px;">
+							</div>
+						</div>
+					{% endfor %}
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
