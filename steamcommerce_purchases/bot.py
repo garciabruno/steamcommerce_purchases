@@ -1017,9 +1017,14 @@ class PurchaseBot(object):
         if not data:
             return None
 
+        if not data.get('median_price') and not data.get('lowest_price'):
+            log.error(u'median_price nor lowest_price was found')
+
+            return None
+
         matches = re.findall(
             config.ECurrencyRegex,
-            data.get('lowest_price'),
+            data.get('median_price') or data.get('lowest_price'),
             re.DOTALL
         )
 
