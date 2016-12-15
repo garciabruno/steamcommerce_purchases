@@ -1032,6 +1032,12 @@ class PurchaseBot(object):
 
             return None
 
+        if hasattr(config, 'REPLACE_REGEX_MATCH'):
+            matches[0] = matches[0].replace(
+                config.REPLACE_REGEX_MATCH[0],
+                config.REPLACE_REGEX_MATCH[1]
+            )
+
         lowest_price = round(float(matches[0]) + float(delta), 2)
 
         log.info(
