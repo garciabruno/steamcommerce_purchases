@@ -986,6 +986,8 @@ class PurchaseBot(object):
                 )
             )
 
+            log.error(u'Request body: {0}'.format(req.text))
+
             return False
 
         try:
