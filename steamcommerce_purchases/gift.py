@@ -10,6 +10,7 @@ import urllib
 
 from steamcommerce_api.api import logger
 from steamcommerce_api.api import message
+from steamcommerce_api.api import product
 from steamcommerce_api.api import userrequest
 from steamcommerce_api.api import paidrequest
 from steamcommerce_api.api import notification
@@ -26,7 +27,8 @@ REDEMER_REQUEST_REGEX = r'([0-9]+)(A|C)([0-9]+)'
 
 
 DEFAULT_REQUEST_MESSAGE = u'''
-Hola, Hemos procesado su pedido. Tu código/link de activación es:\n\n{0}\n\n
+Hola, Hemos procesado su pedido. Tu código/link de activación para el producto {0} es:\n\n{1}\n\n
+
 ****
 Si tienes la intención de regalar este producto por favor no abras el enlace
 en tu navegador, ya que causará que el enlace deje de ser válido.
@@ -127,16 +129,22 @@ class Email(object):
                 to_user_id = userrequest_data['user']['id']
 
                 data.update({'userrequest': request_id})
+
+                relation_data = userrequest.UserRequest().get_relation(int(request_data[0]))
+                product_data = relation_data.get('product')
             elif request_data[1] == 'C':
                 paidrequest_data = paidrequest.PaidRequest().get_id(request_id)
                 to_user_id = paidrequest_data['user']['id']
 
-                data.update({'paidrequest': request_id, })
+                data.update({'paidrequest': request_id})
+
+                relation_data = paidrequest.PaidRequest().get_relation(int(request_data[0]))
+                product_data = relation_data.get('product')
 
             data.update(**{
                 'visible': True,
                 'has_code': True,
-                'content': DEFAULT_REQUEST_MESSAGE.format(gift_link),
+                'content': DEFAULT_REQUEST_MESSAGE.format(product_data.get('title'), gift_link),
                 'to_user': to_user_id
             })
 
