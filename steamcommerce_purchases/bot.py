@@ -247,7 +247,7 @@ class PurchaseBot(object):
 
         return req
 
-    def post_init_transaction(self, giftee_account_id, country_code):
+    def post_init_transaction(self, giftee_account_id, country_code, payment_method='steamaccount'):
         if not self.get_shopping_cart_gid():
             log.error(u'Tried to init transaction without shoppingCartGID')
 
@@ -264,7 +264,7 @@ class PurchaseBot(object):
             data={
                 'gidShoppingCart': self.get_shopping_cart_gid(),
                 'gidReplayOfTransID': '-1',
-                'PaymentMethod': 'steamaccount',
+                'PaymentMethod': payment_method,
                 'abortPendingTransactions': '0',
                 'bHasCardInfo': '0',
                 'CardNumber': '',
@@ -481,7 +481,7 @@ class PurchaseBot(object):
 
         return response.get('success')
 
-    def cart_checkout(self, giftee_account_id, country_code):
+    def cart_checkout(self, giftee_account_id, country_code, payment_method='steamaccount'):
         log.info(
             u'Intializing cart checkout to giftee account id {0}'.format(
                 giftee_account_id
@@ -489,7 +489,7 @@ class PurchaseBot(object):
         )
 
         self.get_cart_checkout()  # Start a call just to fake things up
-        transid = self.post_init_transaction(giftee_account_id, country_code)
+        transid = self.post_init_transaction(giftee_account_id, country_code, payment_method=payment_method)
 
         if isinstance(transid, enums.EPurchaseResult):
             return transid
@@ -523,6 +523,25 @@ class PurchaseBot(object):
 
         if transaction_status == 22 and attemps <= 0:
             return enums.EPurchaseResult.ReachedMaximumPollAttemps
+
+        if payment_method == 'bitcoin':
+            req = self.session.get(
+                'https://store.steampowered.com/checkout/externallink/',
+                params={
+                    'transid': transid
+                }
+            )
+
+            matches = re.findall(
+                'action="(https://bitpay.com.*?)"',
+                req.text,
+                re.DOTALL
+            )
+
+            if not len(matches):
+                log.error(u'Could not find BitPay Invoice from {0}'.format(req.text))
+
+            log.info(u'Generated Bitpay Invoice: {0}'.format(matches[0]))
 
         self.session.cookies.set('shoppingCartGID', None)
         self.save_session_to_file()
@@ -994,9 +1013,7 @@ class PurchaseBot(object):
             data = req.json()
         except Exception, e:
             log.error(
-                u'Could not serialize sell item to market: {0}'.format(
-                    e
-                )
+                u'Could not serialize sell item to market: {0}'.format(e)
             )
 
         if not data.get('success'):
@@ -1110,10 +1127,8 @@ class PurchaseBot(object):
                 price
             )
 
-            if not sell_data:
-                break
-
-            i += 1
+            if sell_data:
+                i += 1
 
 
 class RegisterBot(object):

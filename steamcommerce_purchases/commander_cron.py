@@ -128,20 +128,16 @@ class Cron(object):
 
                 self.call_bot_checkout(currency, response.get('id'))
 
-    def call_bot_checkout(self, currency, bot_id):
-        log.info(
-            u'Calling checkout on {0} ({1})'.format(
-                BOTS[currency],
-                currency
-            )
-        )
+    def call_bot_checkout(self, currency, bot_id, payment_method='steamaccount'):
+        log.info(u'Calling checkout on {0} ({1})'.format(BOTS[currency], currency))
 
         req = requests.post(
             BOTS[currency] + '/bot/cart/checkout/',
             data={
                 'bot_id': bot_id,
                 'country_code': currency,
-                'giftee_account_id': ACCOUNT_IDS[currency]
+                'giftee_account_id': ACCOUNT_IDS[currency],
+                'payment_method': payment_method
             },
             timeout=1800
         )

@@ -187,11 +187,6 @@ class Commander(object):
                 commitment_level = relation.get('commitment_level')
 
                 if commitment_level != enums.ECommitLevel.Uncommited:
-                    log.error(
-                        u'This relation is already commited'
-                        ' and should not be sent to the bots'
-                    )
-
                     continue
 
                 results[currency].append({

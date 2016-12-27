@@ -428,12 +428,16 @@ def bot_cart_checkout():
     bot_id = request.form.get('bot_id')
     country_code = request.form.get('country_code')
     giftee_account_id = request.form.get('giftee_account_id')
+    payment_method = request.form.get('payment_method')
 
     if not bot_id:
         return (enums.EBotResult.NotBotAvailableFound,)
 
     if not giftee_account_id or not country_code:
         return (enums.EBotResult.RaisedUnknownException,)
+
+    if not payment_method:
+        payment_method = 'steamaccount'
 
     bot_obj = controller.BotController().get_bot_id(int(bot_id))
 
@@ -445,55 +449,35 @@ def bot_cart_checkout():
     if not isinstance(purchasebot, bot.PurchaseBot):
         return (purchasebot,)
 
-    controller.BotController().set_bot_state(
-        bot_obj.id,
-        enums.EBotState.PurchasingCart.value
-    )
+    controller.BotController().set_bot_state(bot_obj.id, enums.EBotState.PurchasingCart.value)
 
     shopping_cart_gid = purchasebot.get_shopping_cart_gid()
 
     purchase_result = purchasebot.cart_checkout(
         giftee_account_id,
-        country_code
+        country_code,
+        payment_method=payment_method
     )
 
     if purchase_result == enums.EPurchaseResult.InsufficientFunds:
         controller.BotController().set_last_failed_cart_purchase(bot_obj.id)
-
-        controller.BotController().set_bot_state(
-            bot_obj.id,
-            enums.EBotState.WaitingForSufficientFunds.value
-        )
+        controller.BotController().set_bot_state(bot_obj.id, enums.EBotState.WaitingForSufficientFunds.value)
     elif purchase_result == enums.EPurchaseResult.Succeded:
         purchasebot.sync_data(bot_obj.id)
 
-        controller.BotController().set_last_cart_purchase(
-            bot_obj.id,
-            shopping_cart_gid
-        )
-
-        controller.BotController().set_bot_state(
-            bot_obj.id,
-            enums.EBotState.StandingBy.value
-        )
+        controller.BotController().set_last_cart_purchase(bot_obj.id, shopping_cart_gid)
+        controller.BotController().set_bot_state(bot_obj.id, enums.EBotState.StandingBy.value)
 
         purchasebot.sync_data(bot_obj.id)
     else:
         controller.BotController().set_last_failed_cart_purchase(bot_obj.id)
-
-        controller.BotController().set_bot_state(
-            bot_obj.id,
-            enums.EBotState.BlockedForUnknownReason.value
-        )
+        controller.BotController().set_bot_state(bot_obj.id, enums.EBotState.BlockedForUnknownReason.value)
 
     return (purchase_result, shopping_cart_gid, bot_obj.id)
 
 
 @app.route('/bot/set/state/<int:bot_id>/<int:state>')
 def set_bot_state(bot_id, state):
-    controller.BotController().set_bot_state(
-        bot_id,
-        enums.EBotState(state).value
-    )
+    controller.BotController().set_bot_state(bot_id, enums.EBotState(state).value)
 
     return redirect('/bots/report/')
