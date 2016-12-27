@@ -501,29 +501,6 @@ class PurchaseBot(object):
         if isinstance(transaction_price, enums.EPurchaseResult):
             return transaction_price
 
-        transaction_finalize = self.finalize_transaction(transid)
-
-        if isinstance(transaction_finalize, enums.EPurchaseResult):
-            return transaction_finalize
-
-        transaction_status = 22  # Set initial status as "PENDING"
-        attemps = 25
-
-        while transaction_status == 22 and attemps > 0:
-            # Start polling on transaction status until its either "1" or an
-            # EPurchaseResult
-
-            transaction_status = self.transaction_status(transid)
-
-            if isinstance(transaction_status, enums.EPurchaseResult):
-                return transaction_status
-
-            attemps -= 1
-            time.sleep(0.5)
-
-        if transaction_status == 22 and attemps <= 0:
-            return enums.EPurchaseResult.ReachedMaximumPollAttemps
-
         if payment_method == 'bitcoin':
             req = self.session.get(
                 'https://store.steampowered.com/checkout/externallink/',
@@ -542,6 +519,29 @@ class PurchaseBot(object):
                 log.error(u'Could not find BitPay Invoice from {0}'.format(req.text))
 
             log.info(u'Generated Bitpay Invoice: {0}'.format(matches[0]))
+        else:
+            transaction_finalize = self.finalize_transaction(transid)
+
+            if isinstance(transaction_finalize, enums.EPurchaseResult):
+                return transaction_finalize
+
+            transaction_status = 22  # Set initial status as "PENDING"
+            attemps = 25
+
+            while transaction_status == 22 and attemps > 0:
+                # Start polling on transaction status until its either "1" or an
+                # EPurchaseResult
+
+                transaction_status = self.transaction_status(transid)
+
+                if isinstance(transaction_status, enums.EPurchaseResult):
+                    return transaction_status
+
+                attemps -= 1
+                time.sleep(0.5)
+
+            if transaction_status == 22 and attemps <= 0:
+                return enums.EPurchaseResult.ReachedMaximumPollAttemps
 
         self.session.cookies.set('shoppingCartGID', None)
         self.save_session_to_file()
