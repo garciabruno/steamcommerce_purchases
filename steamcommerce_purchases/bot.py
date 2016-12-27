@@ -341,7 +341,7 @@ class PurchaseBot(object):
 
         return transid
 
-    def get_finalprice(self, transid):
+    def get_finalprice(self, transid, payment_method='steamaccount'):
         log.info(u'Getting get final price with transid {0}'.format(transid))
 
         req = self.session.get(
@@ -381,7 +381,7 @@ class PurchaseBot(object):
 
             return enums.EPurchaseResult.ResponseDidNotContainSuccess
 
-        if response.get('total') > response.get('steamAccountBalance'):
+        if response.get('total') > response.get('steamAccountBalance') and payment_method == 'steamaccount':
             log.error(u'Not enough balance found in final price')
 
             log.error(
