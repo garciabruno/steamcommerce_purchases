@@ -496,7 +496,7 @@ class PurchaseBot(object):
 
         # TODO: if transid == "-1" => Block BOT for TooManyPurchases
 
-        transaction_price = self.get_finalprice(transid)
+        transaction_price = self.get_finalprice(transid, payment_method=payment_method)
 
         if isinstance(transaction_price, enums.EPurchaseResult):
             return transaction_price
