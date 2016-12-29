@@ -10,7 +10,6 @@ import urllib
 
 from steamcommerce_api.api import logger
 from steamcommerce_api.api import message
-from steamcommerce_api.api import product
 from steamcommerce_api.api import userrequest
 from steamcommerce_api.api import paidrequest
 from steamcommerce_api.api import notification
@@ -19,7 +18,7 @@ log = logger.Logger('SteamCommerce Email', 'gift.emails.log').get_logger()
 
 OWNER_ID = 1
 
-GIFT_TITLE_REGEX = r'of the game (.*) on Steam'
+GIFT_TITLE_REGEX = r'of the game(.*) on Steam'
 GIFT_LINK_REGEX = r'(https:\/\/store\.steampowered\.com\/account\/ackgift\/.*?\?redeemer=.*)\r\n\r\nIf'
 GIFT_OWNER_REGEX = r'Hello,\r\n\r\nYour friend (.*?) \(.*?\)'
 GIFT_LINK_UNQUOTED = r'https://store\.steampowered\.com/account/ackgift/.*\?redeemer=(.*)'
