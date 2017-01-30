@@ -19,8 +19,7 @@ log = logger.Logger('SteamCommerce Email', 'gift.emails.log').get_logger()
 OWNER_ID = 1
 
 GIFT_TITLE_REGEX = r'(of the game|del juego)(.*)(on Steam|en Steam)'
-GIFT_LINK_REGEX = r'(https:\/\/store\.steampowered\.com\/account\/ackgift\/.*?\?redeemer=.*)\r\n\r\nIf'
-GIFT_OWNER_REGEX = r'Hello,\r\n\r\nYour friend (.*?) \(.*?\)'
+GIFT_LINK_REGEX = r'(https:\/\/store\.steampowered\.com\/account\/ackgift\/.*?\?redeemer=.*)\r\n\r\n(If|Si)'
 GIFT_LINK_UNQUOTED = r'https://store\.steampowered\.com/account/ackgift/.*\?redeemer=(.*)'
 REDEMER_REQUEST_REGEX = r'([0-9]+)(A|C)([0-9]+)'
 
@@ -73,19 +72,13 @@ class Email(object):
                 continue
 
             gift_links = re.findall(GIFT_LINK_REGEX, mail.body, re.DOTALL)
-            owners = re.findall(GIFT_OWNER_REGEX, mail.body, re.DOTALL)
 
             if len(gift_links) == 0:
                 log.info('Did not find any gift link')
 
                 continue
 
-            if len(owners) == 0:
-                log.info('Did not find owner, setting to ExtremeBot')
-
-                owners = ['ExtremeBot']
-
-            gift_link = gift_links[0]
+            gift_link = gift_links[0][0]
             unquoted_link = urllib.unquote(gift_link)
 
             redeemer = re.findall(GIFT_LINK_UNQUOTED, unquoted_link, re.DOTALL)
