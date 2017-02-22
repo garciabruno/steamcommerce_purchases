@@ -11,3 +11,5 @@ steamcommerce_purchases/debug/*
 *.ipynb
 *.log
 *.out
+data/*.json
+data/*.pickle
