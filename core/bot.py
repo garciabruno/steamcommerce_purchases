@@ -140,15 +140,13 @@ class WebAccount(object):
 
             return cart_object
 
-        return cart_object.count or 0
+        return int(cart_object.count or 0)
 
     def set_cart_count(self, req=None):
         cart_count = self.get_cart_count(req=req)
 
-        if type(cart_count) == enums.EWebAccountResult:
-            self.cart_count = None
-        else:
-            self.cart_count = int(cart_count)
+        if type(cart_count) != enums.EWebAccountResult:
+            self.cart_count = cart_count
 
     def get_shopping_cart_gid(self):
         return self.session.cookies.get('shoppingCartGID', domain='store.steampowered.com')
