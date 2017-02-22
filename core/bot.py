@@ -41,7 +41,7 @@ class WebAccount(object):
         if not self.session_is_logged_in():
             self.init_session()
 
-        self.cart_count = self.set_cart_count()
+        self.set_cart_count()
 
     def init_session(self):
         log.info(
