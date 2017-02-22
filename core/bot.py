@@ -131,8 +131,6 @@ class WebAccount(object):
         return cart_results[0]
 
     def get_cart_count(self, req=None):
-        log.info(u'Getting current cart count for {}'.format(self.account_name))
-
         cart_object = self.get_cart_object(req=req)
 
         if type(cart_object) == enums.EWebAccountResult:
@@ -158,12 +156,28 @@ class WebAccount(object):
         cart_object = self.get_cart_object(req=req)
 
         text_added = cart_object.cart_status_message == 'YOUR ITEM\'S BEEN ADDED!'
-        count_is_bigger = cart_object.count > self.cart_count
+        count_is_bigger = self.get_cart_count(req=req) > self.cart_count
 
         return text_added and count_is_bigger
 
+    def gid_was_removed(self, req):
+        cart_object = self.get_cart_object(req=req)
+
+        text_removed = cart_object.cart_status_message == 'YOUR ITEM HAS BEEN REMOVED!'
+        count_is_smaller = self.get_cart_count(req=req) < self.cart_count
+
+        return text_removed and count_is_smaller
+
+    def cart_is_gifteable(self, req):
+        cart_object = self.get_cart_object(req=req)
+        checkout_link = 'https://store.steampowered.com/checkout/?purchasetype=gift'
+
+        return checkout_link in (cart_object.cart_checkout_button or '')
+
     def add_subid_to_cart(self, subid):
-        log.info(u'Adding subid {0} to cart {1}'.format(subid, self.get_shopping_cart_gid()))
+        shopping_cart_gid = self.get_shopping_cart_gid()
+
+        log.info(u'Adding subid {0} to cart {1}'.format(subid, shopping_cart_gid))
 
         try:
             req = self.session.post(
@@ -183,11 +197,50 @@ class WebAccount(object):
             return enums.EWebAccountResult.Failed
 
         if not self.subid_was_added(req):
+            log.info(u'Checking if shoppingCartGID still exists')
+
+            self.session.get('https://store.steampowered.com')
+
+            if not self.get_shopping_cart_gid():
+                return enums.ECartResult.CartDissapeared
+
             return enums.ECartResult.Failed
 
-        if self.cart_is_gifteable(req):
+        self.set_cart_count(req=req)
+        self.save_session_to_file()
+
+        if not self.cart_is_gifteable(req):
             return enums.ECartResult.CartNotGifteable
 
-        self.set_cart_count(req=req)
-
         return enums.ECartResult.Added
+
+    def remove_gid_from_cart(self, gid):
+        shopping_cart_gid = self.get_shopping_cart_gid()
+
+        log.info(u'Removing item gid {0} from cart {1}'.format(gid, shopping_cart_gid))
+
+        try:
+            req = self.session.post(
+                'https://store.steampowered.com/cart/',
+                data={
+                    'sessionid': self.get_session_id('store.steampowered.com'),
+                    'action': 'remove_line_item',
+                    'cart': shopping_cart_gid,
+                    'lineitem_gid': gid
+                }
+            )
+        except Exception, e:
+            log.error(u'Failed to remove gif {0} from cart. Raised {1}'.format(gid, e))
+
+            return enums.EWebAccountResult.UnknownException
+
+        if req.status_code != 200:
+            return enums.EWebAccountResult.Failed
+
+        if not self.gid_was_removed(req):
+            return enums.ECartResult.Failed
+
+        self.set_cart_count(req=req)
+        self.save_session_to_file()
+
+        return enums.ECartResult.Removed
