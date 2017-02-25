@@ -5,10 +5,11 @@ from enum import IntEnum
 
 
 class EWebAccountResult(IntEnum):
-    CrawlerFailed = 0
     Success = 1
-    Failed = 2
-    UnknownException = 3
+    CrawlerFailed = 2
+    Failed = 3
+    UnknownException = 4
+    ResponseNotSerializable = 5
 
 
 class ECartResult(IntEnum):
@@ -17,3 +18,13 @@ class ECartResult(IntEnum):
     Failed = 3
     CartNotGifteable = 4
     CartDissapeared = 5
+    CartReset = 6
+
+
+class ETransactionResult(IntEnum):
+    Success = 1
+    Fail = 2
+    ShoppingCartGIDNotFound = 3
+    TransIdNotFound = 4
+    InsufficientFunds = 5
+    TooManyPurchases = 6
