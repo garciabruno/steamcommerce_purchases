@@ -453,6 +453,28 @@ class WebAccount(object):
 
         return data
 
+    def get_external_link_from_transid(self, transid):
+        req = self.session.get(
+            'https://store.steampowered.com/checkout/externallink/',
+            params={
+                'transid': transid
+            }
+        )
+
+        if req.status_code != 200:
+            log.error(u'Failed to get external link. Status code {0} Body {1}'.format(req.status_code, req.text))
+
+            return enums.EWebAccountResult.Failed
+
+        forms = items.ExternalForm.all_from(req.text)
+
+        if not len(forms):
+            log.error(u'Could not match any ExternalFrom from body')
+
+            return enums.EWebAccountResult.Failed
+
+        return forms[0].link
+
 
 class EdgeBot(object):
     def __init__(self, network_id):
