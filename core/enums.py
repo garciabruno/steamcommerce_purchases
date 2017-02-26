@@ -28,3 +28,9 @@ class ETransactionResult(IntEnum):
     TransIdNotFound = 4
     InsufficientFunds = 5
     TooManyPurchases = 6
+
+
+class EdgeResult(IntEnum):
+    IncompleteForm = 1
+    ParamNotSerializable = 2
+    TaskNotFound = 3
