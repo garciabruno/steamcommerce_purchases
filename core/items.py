@@ -24,3 +24,7 @@ class SteamCart(demiurge.Item):
     cart_checkout_button = demiurge.AttributeValueField(selector='a.continue:eq(0)', attr='href')
 
     items = demiurge.RelatedItem(SteamCartItem, selector='div.cart_item_list')
+
+
+class ExternalForm(demiurge.Item):
+    link = demiurge.AttributeValueField(selector='form#externalForm', attr='action')
