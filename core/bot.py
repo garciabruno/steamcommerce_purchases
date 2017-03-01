@@ -154,6 +154,9 @@ class WebAccount(object):
     def get_shopping_cart_gid(self):
         return self.session.cookies.get('shoppingCartGID', domain='store.steampowered.com')
 
+    def reset_shopping_cart_gid(self):
+        return self.session.cookies.set('shoppingCartGID', None)
+
     def get_session_id(self, domain):
         return self.session.cookies.get('sessionid', domain=domain)
 
@@ -568,9 +571,10 @@ class EdgeBot(object):
         shopping_cart_gid = self.web_account.get_shopping_cart_gid()
 
         log.info(
-            u'Checking out cart for network_id {0} with shoppingCartGID {1}'.format(
+            u'Checking out cart for network_id {0} with shoppingCartGID {1} (Payment method: {2})'.format(
                 self.network_id,
-                shopping_cart_gid
+                shopping_cart_gid,
+                payment_method
             )
         )
 
@@ -626,27 +630,31 @@ class EdgeBot(object):
         result = EResult(transaction_data.get('success'))
         attemps = 25
 
-        log.info(u'Polling transaction status...')
+        if payment_method != 'bitcoin':
+            log.info(u'Polling transaction status...')
 
-        while result == EResult.Pending and attemps > 0:
-            transaction_status = self.web_account.get_transaction_status(transid)
+            while result != EResult.Pending and attemps > 0:
+                transaction_status = self.web_account.get_transaction_status(transid)
 
-            if isinstance(transaction_status, enums.EWebAccountResult):
-                log.error(
-                    u'Failed to get transaction status for transid {0}, received {1}'.format(
-                        transid,
-                        repr(transaction_status)
+                if isinstance(transaction_status, enums.EWebAccountResult):
+                    log.error(
+                        u'Failed to get transaction status for transid {0}, received {1}'.format(
+                            transid,
+                            repr(transaction_status)
+                        )
                     )
-                )
 
-                continue
+                    continue
 
-            result = EResult(transaction_status.get('success'))
-            attemps -= 1
+                result = EResult(transaction_status.get('success'))
+                attemps -= 1
 
-            time.sleep(0.5)
+                time.sleep(0.5)
 
         if result == EResult.OK:
             log.info(u'Transaction finalized successfully')
 
-        return (result, transid)
+            self.cart_count = 0
+            self.web_account.reset_shopping_cart_gid()
+
+        return (result.value, transid)
