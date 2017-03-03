@@ -282,6 +282,11 @@ class WebAccount(object):
         if not shopping_cart_gid:
             return enums.ETransactionResult.ShoppingCartGIDNotFound
 
+        if payment_method == 'steamaccount':
+            use_remaining_funds = '1'
+        else:
+            use_remaining_funds = '0'
+
         log.info(u'Init transaction with shoppingCartGID {}'.format(shopping_cart_gid))
 
         req = self.session.post(
@@ -324,7 +329,7 @@ class WebAccount(object):
                 'BankBIC': '',
                 'bSaveBillingAddress': '1',
                 'gidPaymentID': '',
-                'bUseRemainingSteamAccount': '1',
+                'bUseRemainingSteamAccount': use_remaining_funds,
                 'bPreAuthOnly': '0'
             }
         )
@@ -388,7 +393,9 @@ class WebAccount(object):
 
             return enums.EWebAccountResult.UnknownException
 
-        if not data.get('success'):
+        result = EResult(data.get('success'))
+
+        if result != EResult.OK:
             return enums.ETransactionResult.Fail
 
         if data.get('total') > data.get('steamAccountBalance') and payment_method == 'steamaccount':
@@ -457,26 +464,42 @@ class WebAccount(object):
         return data
 
     def get_external_link_from_transid(self, transid):
-        req = self.session.get(
-            'https://store.steampowered.com/checkout/externallink/',
-            params={
-                'transid': transid
+        attemps = 10
+        external_link = None
+
+        while external_link is None and attemps > 0:
+            log.info(u'Getting external link for transid {0} ({1}/10) '.format(transid, attemps))
+
+            req = self.session.get(
+                'https://store.steampowered.com/checkout/externallink/',
+                params={
+                    'transid': transid
+                }
+            )
+
+            if req.status_code != 200:
+                log.error(u'Failed to get external link. Status code {0} Body {1}'.format(req.status_code, req.text))
+
+                return enums.EWebAccountResult.Failed.value
+
+            forms = items.ExternalForm.all_from(req.text)
+
+            if not len(forms):
+                log.error(u'Could not match any ExternalFrom from body')
+
+                return enums.EWebAccountResult.Failed.value
+
+            external_link = forms[0].link
+
+            if not external_link:
+                attemps -= 1
+
+                continue
+
+            return {
+                'link': external_link,
+                'shopping_cart_gid': self.get_shopping_cart_gid()
             }
-        )
-
-        if req.status_code != 200:
-            log.error(u'Failed to get external link. Status code {0} Body {1}'.format(req.status_code, req.text))
-
-            return enums.EWebAccountResult.Failed
-
-        forms = items.ExternalForm.all_from(req.text)
-
-        if not len(forms):
-            log.error(u'Could not match any ExternalFrom from body')
-
-            return enums.EWebAccountResult.Failed
-
-        return forms[0].link
 
 
 class EdgeBot(object):
@@ -570,6 +593,9 @@ class EdgeBot(object):
     def checkout_cart(self, giftee_account_id, payment_method='steamaccount'):
         shopping_cart_gid = self.web_account.get_shopping_cart_gid()
 
+        if not shopping_cart_gid:
+            return enums.ETransactionResult.ShoppingCartGIDNotFound.value
+
         log.info(
             u'Checking out cart for network_id {0} with shoppingCartGID {1} (Payment method: {2})'.format(
                 self.network_id,
@@ -586,12 +612,14 @@ class EdgeBot(object):
         if isinstance(transid, enums.EWebAccountResult) or isinstance(transid, enums.ETransactionResult):
             log.error(u'Failed to initialize transaction, received {}'.format(repr(transid)))
 
-            return enums.ETransactionResult.Fail
+            return enums.ETransactionResult.Fail.value
 
         if transid == '-1':
             log.info(u'Received transid -1, account has too many purchases in the last few hours')
 
-            return enums.ETransactionResult.TooManyPurchases
+            return enums.ETransactionResult.TooManyPurchases.value
+
+        log.info(u'Received transid {} from init transaction'.format(transid))
 
         transaction_final_price = self.web_account.get_transaction_final_price(
             transid,
@@ -605,7 +633,7 @@ class EdgeBot(object):
                 )
             )
 
-            return enums.ETransactionResult.Fail
+            return enums.ETransactionResult.Fail.value
 
         if transaction_final_price != enums.ETransactionResult.Success:
             log.error(
@@ -614,7 +642,18 @@ class EdgeBot(object):
                 )
             )
 
-            return transaction_final_price
+            return transaction_final_price.value
+
+        if payment_method == 'bitcoin':
+            if transaction_final_price == enums.ETransactionResult.Success:
+                return {
+                    'result': EResult.OK.value,
+                    'transid': transid,
+                    'payment_method': payment_method,
+                    'shopping_cart_gid': shopping_cart_gid
+                }
+            else:
+                return transaction_final_price.value
 
         transaction_data = self.web_account.finalize_transaction(transid)
 
@@ -625,31 +664,30 @@ class EdgeBot(object):
                 )
             )
 
-            return transaction_data
+            return enums.ETransactionResult.Fail.value
 
-        result = EResult(transaction_data.get('success'))
+        result = EResult.Pending
         attemps = 25
 
-        if payment_method != 'bitcoin':
+        while result != EResult.OK and attemps > 0:
             log.info(u'Polling transaction status...')
 
-            while result != EResult.Pending and attemps > 0:
-                transaction_status = self.web_account.get_transaction_status(transid)
+            transaction_status = self.web_account.get_transaction_status(transid)
 
-                if isinstance(transaction_status, enums.EWebAccountResult):
-                    log.error(
-                        u'Failed to get transaction status for transid {0}, received {1}'.format(
-                            transid,
-                            repr(transaction_status)
-                        )
+            if isinstance(transaction_status, enums.EWebAccountResult):
+                log.error(
+                    u'Failed to get transaction status for transid {0}, received {1}'.format(
+                        transid,
+                        repr(transaction_status)
                     )
+                )
 
-                    continue
+                continue
 
-                result = EResult(transaction_status.get('success'))
-                attemps -= 1
+            result = EResult(transaction_status.get('success'))
+            attemps -= 1
 
-                time.sleep(0.5)
+            time.sleep(0.5)
 
         if result == EResult.OK:
             log.info(u'Transaction finalized successfully')
@@ -657,4 +695,9 @@ class EdgeBot(object):
             self.cart_count = 0
             self.web_account.reset_shopping_cart_gid()
 
-        return (result.value, transid)
+        return {
+            'result': result.value,
+            'transid': transid,
+            'payment_method': payment_method,
+            'shopping_cart_gid': shopping_cart_gid
+        }
