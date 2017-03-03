@@ -44,6 +44,8 @@ def get_external_link_from_transid(self, network_id, transid):
     edge_bot = bot.EdgeBot(network_id)
     response = edge_bot.web_account.get_external_link_from_transid(transid)
 
-    poll_transaction_status.delay(network_id, transid)
+    # Give edge controller 60 seconds for payment to complete purchase
+
+    poll_transaction_status.delay(network_id, transid, times=60, delay=1)
 
     return response
