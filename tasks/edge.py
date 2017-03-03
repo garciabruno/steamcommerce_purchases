@@ -22,6 +22,16 @@ def checkout_cart(self, network_id, giftee_account_id, payment_method='steamacco
 
 
 @app.app.task(bind=True)
+def reset_shopping_cart(self, network_id):
+    edge_bot = bot.EdgeBot(network_id)
+
+    edge_bot.web_account.reset_shopping_cart_gid()
+    edge_bot.web_account.save_session_to_file()
+
+    return {'success': True}
+
+
+@app.app.task(bind=True)
 def get_external_link_from_transid(self, network_id, transid):
     edge_bot = bot.EdgeBot(network_id)
     response = edge_bot.web_account.get_external_link_from_transid(transid)
