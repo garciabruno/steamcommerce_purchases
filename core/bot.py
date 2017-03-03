@@ -353,6 +353,8 @@ class WebAccount(object):
         transid = data.get('transid')
 
         if not transid:
+            log.error(u'Transid not found in init transaction data: {}'.format(data))
+
             return enums.ETransactionResult.TransIdNotFound
 
         return transid
