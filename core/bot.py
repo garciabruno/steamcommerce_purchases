@@ -496,7 +496,7 @@ class WebAccount(object):
                 'shopping_cart_gid': self.get_shopping_cart_gid()
             }
 
-    def poll_transaction_status(self, transid, times=25):
+    def poll_transaction_status(self, transid, times=25, delay=0.5):
         result = EResult.Pending
         attemps = times
 
@@ -524,7 +524,7 @@ class WebAccount(object):
             result = EResult(transaction_status.get('success'))
             attemps -= 1
 
-            time.sleep(0.5)
+            time.sleep(delay)
 
         return result
 
