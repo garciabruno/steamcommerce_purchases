@@ -32,8 +32,18 @@ def reset_shopping_cart(self, network_id):
 
 
 @app.app.task(bind=True)
+def poll_transaction_status(self, network_id, transid):
+    edge_bot = bot.EdgeBot(network_id)
+    response = edge_bot.web_account.poll_transaction_status(transid)
+
+    return response
+
+
+@app.app.task(bind=True)
 def get_external_link_from_transid(self, network_id, transid):
     edge_bot = bot.EdgeBot(network_id)
     response = edge_bot.web_account.get_external_link_from_transid(transid)
+
+    poll_transaction_status.delay(network_id, transid)
 
     return response
