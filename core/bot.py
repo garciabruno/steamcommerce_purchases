@@ -282,11 +282,6 @@ class WebAccount(object):
         if not shopping_cart_gid:
             return enums.ETransactionResult.ShoppingCartGIDNotFound
 
-        if payment_method == 'steamaccount':
-            use_remaining_funds = '1'
-        else:
-            use_remaining_funds = '0'
-
         log.info(u'Init transaction with shoppingCartGID {}'.format(shopping_cart_gid))
 
         req = self.session.post(
@@ -329,7 +324,7 @@ class WebAccount(object):
                 'BankBIC': '',
                 'bSaveBillingAddress': '1',
                 'gidPaymentID': '',
-                'bUseRemainingSteamAccount': use_remaining_funds,
+                'bUseRemainingSteamAccount': '1',
                 'bPreAuthOnly': '0'
             }
         )
