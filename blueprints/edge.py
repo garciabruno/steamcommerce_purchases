@@ -33,7 +33,7 @@ def edge_cart_status():
     task_id = request.form.get('task_id')
     task_name = request.form.get('task_name')
 
-    if not getattr(edge_task, task_name):
+    if not hasattr(edge_task, task_name):
         return {
             'success': False,
             'result': enums.EdgeResult.TaskNotFound.value
@@ -108,6 +108,29 @@ def edge_cart_checkout():
         'task_id': task.id,
         'task_status': task.status,
         'task_name': 'checkout_cart'
+    }
+
+
+@edge.route('/cart/reset/', methods=['POST'])
+@route_decorators.as_json
+def edge_cart_reset():
+    network_id = request.form.get('network_id')
+
+    try:
+        network_id = int(network_id)
+    except ValueError:
+        return {
+            'success': False,
+            'result': enums.EdgeResult.ParamNotSerializable.value
+        }
+
+    task = edge_task.reset_shopping_cart.delay(network_id)
+
+    return {
+        'success': True,
+        'task_id': task.id,
+        'task_status': task.status,
+        'task_name': 'reset_shopping_cart'
     }
 
 
