@@ -496,6 +496,38 @@ class WebAccount(object):
                 'shopping_cart_gid': self.get_shopping_cart_gid()
             }
 
+    def poll_transaction_status(self, transid, times=25):
+        result = EResult.Pending
+        attemps = times
+
+        while result != EResult.OK and attemps > 0:
+            log.info(
+                u'Polling transaction status for transid {0} ({1}/{2})'.format(
+                    transid,
+                    attemps,
+                    times
+                )
+            )
+
+            transaction_status = self.get_transaction_status(transid)
+
+            if isinstance(transaction_status, enums.EWebAccountResult):
+                log.error(
+                    u'Failed to get transaction status for transid {0}, received {1}'.format(
+                        transid,
+                        repr(transaction_status)
+                    )
+                )
+
+                continue
+
+            result = EResult(transaction_status.get('success'))
+            attemps -= 1
+
+            time.sleep(0.5)
+
+        return result
+
 
 class EdgeBot(object):
     def __init__(self, network_id):
@@ -661,28 +693,7 @@ class EdgeBot(object):
 
             return enums.ETransactionResult.Fail.value
 
-        result = EResult.Pending
-        attemps = 25
-
-        while result != EResult.OK and attemps > 0:
-            log.info(u'Polling transaction status...')
-
-            transaction_status = self.web_account.get_transaction_status(transid)
-
-            if isinstance(transaction_status, enums.EWebAccountResult):
-                log.error(
-                    u'Failed to get transaction status for transid {0}, received {1}'.format(
-                        transid,
-                        repr(transaction_status)
-                    )
-                )
-
-                continue
-
-            result = EResult(transaction_status.get('success'))
-            attemps -= 1
-
-            time.sleep(0.5)
+        result = self.web_account.poll_transaction_status(transid, times=25)
 
         if result == EResult.OK:
             log.info(u'Transaction finalized successfully')
