@@ -42,14 +42,17 @@ def edge_cart_status():
     task = getattr(edge_task, task_name).AsyncResult(task_id)
 
     try:
-        task_result = json.dumps(task.result)
+        json.dumps(task.result)
     except ValueError:
-        task_result = str(task_result)
+        return {
+            'success': False,
+            'task_status': task.state
+        }
 
     return {
         'success': True,
         'task_status': task.state,
-        'task_result': task_result
+        'task_result': task.result
     }
 
 
