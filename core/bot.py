@@ -498,6 +498,10 @@ class WebAccount(object):
                 'shopping_cart_gid': self.get_shopping_cart_gid()
             }
 
+        log.error(u'Finished polling but could not obtain transaction link from external link')
+
+        return enums.EWebAccountResult.Failed.value
+
     def poll_transaction_status(self, transid, times=25, delay=0.5):
         result = EResult.Pending
         attemps = times
