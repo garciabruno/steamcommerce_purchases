@@ -8,6 +8,8 @@ import time
 import pickle
 import base64
 
+import config
+
 from core import items
 from core import enums
 from core import logger
@@ -284,49 +286,19 @@ class WebAccount(object):
 
         log.info(u'Init transaction with shoppingCartGID {}'.format(shopping_cart_gid))
 
+        transaction_data = config.TRANSACTION_DATA
+
+        transaction_data.update({
+            'gidShoppingCart': shopping_cart_gid,
+            'PaymentMethod': payment_method,
+            'Country': country_code,
+            'ShippingCountry': country_code,
+            'GifteeAccountID': giftee_account_id
+        })
+
         req = self.session.post(
             'https://store.steampowered.com/checkout/inittransaction/',
-            data={
-                'gidShoppingCart': self.get_shopping_cart_gid(),
-                'gidReplayOfTransID': '-1',
-                'PaymentMethod': payment_method,
-                'abortPendingTransactions': '0',
-                'bHasCardInfo': '0',
-                'CardNumber': '',
-                'CardExpirationYear': '',
-                'CardExpirationMonth': '',
-                'FirstName': '',
-                'LastName': '',
-                'Address': '',
-                'AddressTwo': '',
-                'Country': country_code,
-                'Phone': '',
-                'ShippingFirstName': '',
-                'ShippingLastName': '',
-                'ShippingAddress': '',
-                'ShippingAddressTwo': '',
-                'ShippingCountry': country_code,
-                'ShippingCity': '',
-                'ShippingState': '',
-                'ShippingPostalCode': '',
-                'ShippingPhone': '',
-                'bIsGift': '1',
-                'GifteeAccountID': giftee_account_id,
-                'GifteeEmail': '',
-                'GifteeName': '',
-                'GiftMessage': '',
-                'Sentiment': 'Best Wishes',
-                'Signature': '',
-                'ScheduledSendOnDate': '0',
-                'BankAccount': '',
-                'BankCode': '',
-                'BankIBAN': '',
-                'BankBIC': '',
-                'bSaveBillingAddress': '1',
-                'gidPaymentID': '',
-                'bUseRemainingSteamAccount': '1',
-                'bPreAuthOnly': '0'
-            }
+            data=transaction_data
         )
 
         if req.status_code != 200:
@@ -346,6 +318,8 @@ class WebAccount(object):
             return enums.EWebAccountResult.UnknownException
 
         if not data.get('success'):
+            log.error(u'Response for init transaction was {}'.format(data))
+
             return enums.ETransactionResult.Fail
 
         # Note: if transid is -1 then too many purchases should trigger
@@ -393,6 +367,8 @@ class WebAccount(object):
         result = EResult(data.get('success'))
 
         if result != EResult.OK:
+            log.error(u'Response for final price is {}'.format(data))
+
             return enums.ETransactionResult.Fail
 
         if data.get('total') > data.get('steamAccountBalance') and payment_method == 'steamaccount':
