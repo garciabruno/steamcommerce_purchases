@@ -494,6 +494,7 @@ class WebAccount(object):
                 continue
 
             return {
+                'transid': transid,
                 'link': external_link,
                 'shopping_cart_gid': self.get_shopping_cart_gid()
             }
@@ -642,15 +643,15 @@ class EdgeBot(object):
             payment_method=payment_method
         )
 
-        if isinstance(transid, enums.EWebAccountResult) or isinstance(transid, enums.ETransactionResult):
-            log.error(u'Failed to initialize transaction, received {}'.format(repr(transid)))
-
-            return enums.ETransactionResult.Fail.value
-
         if transid == '-1':
             log.info(u'Received transid -1, account has too many purchases in the last few hours')
 
             return enums.ETransactionResult.TooManyPurchases.value
+
+        if isinstance(transid, enums.EWebAccountResult) or isinstance(transid, enums.ETransactionResult):
+            log.error(u'Failed to initialize transaction, received {}'.format(repr(transid)))
+
+            return enums.ETransactionResult.Fail.value
 
         log.info(u'Received transid {} from init transaction'.format(transid))
 
@@ -699,7 +700,7 @@ class EdgeBot(object):
 
             return enums.ETransactionResult.Fail.value
 
-        result = self.web_account.poll_transaction_status(transid, times=25)
+        result = self.web_account.poll_transaction_status(transid, times=5)
 
         if result == EResult.OK:
             log.info(u'Transaction finalized successfully')
