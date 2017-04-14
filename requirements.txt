@@ -1,0 +1,7 @@
+enum34==1.1.6
+demiurge
+steam
+flask
+redis
+celery
+# apt-get install build-essential libssl-dev libffi-dev python-dev
