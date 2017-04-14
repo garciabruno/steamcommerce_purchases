@@ -4,4 +4,5 @@ steam
 flask
 redis
 celery
+redis
 # apt-get install build-essential libssl-dev libffi-dev python-dev
