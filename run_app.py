@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:Utf-8 -*-
 
+import config
+
 from app import app
 
 from core import steambot
@@ -15,9 +17,9 @@ except Exception, e:
 
     raise SystemExit
 
-steambot.log.info('Starting HTTP Server')
+steambot.log.info('Starting HTTP Server on {0}:{1}'.format(config.HOST, config.PORT))
 
-http_server = WSGIServer(('', 5000), app)
+http_server = WSGIServer((config.HOST, config.PORT), app)
 
 try:
     http_server.serve_forever()
