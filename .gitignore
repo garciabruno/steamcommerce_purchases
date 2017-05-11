@@ -13,3 +13,4 @@ steamcommerce_purchases/debug/*
 *.out
 data/*.json
 data/*.pickle
+data/*.bin
