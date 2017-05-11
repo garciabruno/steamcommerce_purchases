@@ -9,6 +9,7 @@ if __name__ == "__main__":
     sys.path.insert(0, '..')
     __import__('app').app.run(
         debug=config.DEBUG,
+        port=config.PORT,
         host=config.HOST,
         threaded=True
     )
