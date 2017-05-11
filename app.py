@@ -14,8 +14,9 @@ app = Flask(__name__)
 app.config.from_object(config)
 
 from blueprints.edge import edge
+from blueprints.isteamuser import isteamuser
 
-BLUEPRINTS = [edge]
+BLUEPRINTS = [edge, isteamuser]
 
 for blueprint in BLUEPRINTS:
     app.register_blueprint(
