@@ -151,6 +151,11 @@ class SteamBot(object):
     def client_friend_new(self, steam_user):
         log.info(u'Accepted a friend invite from {}'.format(steam_user))
 
+        try:
+            del self.friend_add_results[steam_user.steam_id.as_64]
+        except:
+            pass
+
     def client_friend_removed(self, steam_user):
         log.info(u'{} is no longer in friends list'.format(steam_user))
 
@@ -159,8 +164,15 @@ class SteamBot(object):
         except:
             pass
 
+        try:
+            del self.friend_add_results['0']
+        except:
+            pass
+
     def client_friend_invite(self, steam_user):
         log.info(u'Received a friend invite from {}'.format(steam_user))
+
+        self.add_friend(steam_user.steam_id.as_64)
 
     def client_friend_add_result(self, result, steam_id):
         log.info(u'Received {0} after adding {1}'.format(repr(result), steam_id))
