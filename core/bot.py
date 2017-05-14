@@ -331,6 +331,8 @@ class WebAccount(object):
 
             return enums.ETransactionResult.TransIdNotFound
 
+        log.info(u'Received transaction id {}'.format(transid))
+
         return transid
 
     def get_transaction_final_price(self, transid, payment_method='steamaccount'):
@@ -375,6 +377,12 @@ class WebAccount(object):
             log.info(u'Insufficient funds for transid {}'.format(transid))
 
             return enums.ETransactionResult.InsufficientFunds
+
+        log.info(
+            u'Got final price successfully. Received ${} as final price'.format(
+                data.get('total') / 100.0
+            )
+        )
 
         return enums.ETransactionResult.Success
 
@@ -461,6 +469,8 @@ class WebAccount(object):
                 log.error(u'Could not match any ExternalFrom from body')
 
                 return enums.EWebAccountResult.Failed.value
+
+            log.debug(req.text)
 
             external_link = forms[0].link
 
@@ -628,8 +638,6 @@ class EdgeBot(object):
             log.error(u'Failed to initialize transaction, received {}'.format(repr(transid)))
 
             return enums.ETransactionResult.Fail.value
-
-        log.info(u'Received transid {} from init transaction'.format(transid))
 
         transaction_final_price = self.web_account.get_transaction_final_price(
             transid,
