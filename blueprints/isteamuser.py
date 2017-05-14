@@ -9,7 +9,7 @@ from flask import redirect
 from flask import url_for
 from flask import Blueprint
 
-isteamuser = Blueprint('isteamuser.api', __name__)
+isteamuser = Blueprint('isteamuser', __name__)
 
 
 @isteamuser.route('/SendMessage/')
@@ -37,7 +37,7 @@ def AddFriend():
     steambot = WORKERS[network_id]
     steambot.add_friend(int(steam_id))
 
-    return redirect(url_for('GetFriendAddResults', network_id=network_id))
+    return redirect(url_for('isteamuser.GetFriendAddResults', network_id=network_id))
 
 
 @isteamuser.route('/GetFriendAddResults/')
