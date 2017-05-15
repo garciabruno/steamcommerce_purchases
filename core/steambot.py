@@ -108,6 +108,9 @@ class SteamBot(object):
     def get_friends_list(self):
         return filter(lambda x: x.relationship == 3, self.steamclient.friends)
 
+    def get_sent_invitations(self):
+        return filter(lambda x: x.relationship != 3, self.steamclient.friends)
+
     def add_friend(self, steamid):
         self.steamclient.friends.add(steam.client.user.SteamID(steamid))
 
