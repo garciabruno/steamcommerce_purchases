@@ -74,3 +74,28 @@ def GetFriendsList():
         })
 
     return jsonify(result)
+
+
+@isteamuser.route('/GetSentInvitations/')
+def GetSentInvitations():
+    network_id = request.args.get('network_id', '')
+    ids = request.args.get('ids', '')
+
+    if not network_id:
+        return jsonify({'error': 'No network_id provided'})
+
+    result = []
+    friendslist = WORKERS[network_id].get_sent_invitations()
+
+    if ids:
+        return jsonify([x.steam_id.as_64 for x in friendslist])
+
+    for friend in friendslist:
+        result.append({
+            'relationship': friend.relationship.value,
+            'SteamID64': friend.steam_id.as_64,
+            'avatar_url': friend.get_avatar_url(),
+            'name': friend.name
+        })
+
+    return jsonify(result)
