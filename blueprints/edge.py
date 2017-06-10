@@ -99,7 +99,6 @@ def edge_cart_push():
 def edge_cart_checkout():
     network_id = request.form.get('network_id')
     giftee_account_id = request.form.get('giftee_account_id')
-    payment_method = request.form.get('payment_method') or 'steamaccount'
 
     try:
         network_id = int(network_id)
@@ -109,7 +108,7 @@ def edge_cart_checkout():
             'result': enums.EdgeResult.ParamNotSerializable.value
         }
 
-    task = edge_task.checkout_cart.delay(network_id, giftee_account_id, payment_method=payment_method)
+    task = edge_task.checkout_cart.delay(network_id, giftee_account_id)
 
     return {
         'success': True,
