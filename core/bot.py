@@ -622,8 +622,8 @@ class EdgeBot(object):
 
         payment_method = 'bitcoin'
 
-        subtotal_matches = re.dotall(US_CURRENCY_REGEX, cart_object.subtotal, re.DOTALL)
-        balance_matches = re.dotall(US_CURRENCY_REGEX, cart_object.balance, re.DOTALL)
+        subtotal_matches = re.findall(US_CURRENCY_REGEX, cart_object.subtotal, re.DOTALL)
+        balance_matches = re.findall(US_CURRENCY_REGEX, cart_object.balance, re.DOTALL)
 
         if len(subtotal_matches) and len(balance_matches):
             subtotal = float(subtotal_matches[0])
