@@ -14,9 +14,9 @@ def add_subids_to_cart(self, network_id, items):
 
 
 @app.app.task(bind=True)
-def checkout_cart(self, network_id, giftee_account_id, payment_method='steamaccount'):
+def checkout_cart(self, network_id, giftee_account_id):
     edge_bot = bot.EdgeBot(network_id)
-    response = edge_bot.checkout_cart(giftee_account_id, payment_method=payment_method)
+    response = edge_bot.checkout_cart(giftee_account_id)
 
     return response
 
