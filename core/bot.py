@@ -610,11 +610,27 @@ class EdgeBot(object):
 
         return response
 
-    def checkout_cart(self, giftee_account_id, payment_method='steamaccount'):
+    def checkout_cart(self, giftee_account_id):
         shopping_cart_gid = self.web_account.get_shopping_cart_gid()
 
         if not shopping_cart_gid:
             return enums.ETransactionResult.ShoppingCartGIDNotFound.value
+
+        cart_object = self.web_account.get_cart_object()
+
+        US_CURRENCY_REGEX = r'\$(.*)'
+
+        payment_method = 'bitcoin'
+
+        subtotal_matches = re.dotall(US_CURRENCY_REGEX, cart_object.subtotal, re.DOTALL)
+        balance_matches = re.dotall(US_CURRENCY_REGEX, cart_object.balance, re.DOTALL)
+
+        if len(subtotal_matches) and len(balance_matches):
+            subtotal = float(subtotal_matches[0])
+            balance = float(balance_matches[0])
+
+            if balance >= subtotal:
+                payment_method = 'steamaccount'
 
         log.info(
             u'Checking out cart for network_id {0} with shoppingCartGID {1} (Payment method: {2})'.format(
