@@ -706,7 +706,9 @@ class EdgeBot(object):
             log.info(u'Transaction finalized successfully')
 
             self.cart_count = 0
+
             self.web_account.reset_shopping_cart_gid()
+            self.web_account.save_session_to_file()
 
         return {
             'result': result.value,
