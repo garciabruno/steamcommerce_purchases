@@ -317,12 +317,16 @@ class WebAccount(object):
 
             return enums.EWebAccountResult.UnknownException
 
-        if not data.get('success'):
+        result = EResult(data.get('success'))
+        purchase_result_detail = int(data.get('purchaseresultdetail'))
+
+        if result != EResult.OK:
             log.error(u'Response for init transaction was {}'.format(data))
 
-            return enums.ETransactionResult.Fail
+            if purchase_result_detail == 53:
+                return '-1'
 
-        # Note: if transid is -1 then too many purchases should trigger
+            return enums.ETransactionResult.Fail
 
         transid = data.get('transid')
 
@@ -648,10 +652,16 @@ class EdgeBot(object):
         if transid == '-1':
             log.info(u'Received transid -1, account has too many purchases in the last few hours')
 
+            self.web_account.reset_shopping_cart_gid()
+            self.web_account.save_session_to_file()
+
             return enums.ETransactionResult.TooManyPurchases.value
 
         if isinstance(transid, enums.EWebAccountResult) or isinstance(transid, enums.ETransactionResult):
             log.error(u'Failed to initialize transaction, received {}'.format(repr(transid)))
+
+            self.web_account.reset_shopping_cart_gid()
+            self.web_account.save_session_to_file()
 
             return enums.ETransactionResult.Fail.value
 
@@ -675,6 +685,9 @@ class EdgeBot(object):
                     repr(transaction_final_price)
                 )
             )
+
+            self.web_account.reset_shopping_cart_gid()
+            self.web_account.save_session_to_file()
 
             return transaction_final_price.value
 
